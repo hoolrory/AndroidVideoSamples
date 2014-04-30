@@ -3,4 +3,6 @@
     <string name="app_name">CommonVideoLibrary</string>
 
     <string name="select_video">Select Video</string>
+    
+    <string name="selected_video_thumbnail">Selected Video\'s Thumbnail</string>
 </resources>

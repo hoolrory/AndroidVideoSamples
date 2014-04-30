@@ -7,9 +7,5 @@
     <string name="trim_video">Trim Video</string>
     <string name="downsample_video">Downsample Video</string>
     
-    <string name="select_video">Select Video</string>
-    
-    <string name="selected_video_thumbnail">Selected Video\'s Thumbnail</string>
-    
 
 </resources>
