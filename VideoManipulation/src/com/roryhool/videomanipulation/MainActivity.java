@@ -47,19 +47,19 @@ public class MainActivity extends Activity {
    }
 
    public void onRotateClicked( View view ) {
-      this.startActivity( new Intent( this, RotationActivity.class ) );
+      startActivity( new Intent( this, RotationActivity.class ) );
    }
 
    public void onJoinClicked( View view ) {
-
+      startActivity( new Intent( this, JoinActivity.class ) );
    }
 
    public void onTrimClicked( View view ) {
-
+      startActivity( new Intent( this, TrimActivity.class ) );
    }
 
    public void onDownsampleClicked( View view ) {
-
+      startActivity( new Intent( this, DownsampleActivity.class ) );
    }
 
 }
