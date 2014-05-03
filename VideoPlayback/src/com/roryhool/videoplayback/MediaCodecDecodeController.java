@@ -251,27 +251,12 @@ public class MediaCodecDecodeController extends ControllerBase {
             if ( mPlaying ) {
 
                if ( isEOS ) {
-                  mTimer.setTime( 0 );
-                  mExtractor.seekTo( 0, MediaExtractor.SEEK_TO_CLOSEST_SYNC );
-                  mCurrentPosition = (int) mExtractor.getSampleTime() / 1000;
-                  mDecoder.flush();
-                  mInputBuffers = mDecoder.getInputBuffers();
-                  mOutputBuffers = mDecoder.getOutputBuffers();
-
-                  mInfo = new BufferInfo();
+                  seekTo( 0, MediaExtractor.SEEK_TO_CLOSEST_SYNC );
                   isEOS = false;
                }
 
                if ( mSeekToMs != -1 ) {
-                  mTimer.setTime( mSeekToMs );
-                  mExtractor.seekTo( mSeekToMs * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC );
-                  mCurrentPosition = (int) mExtractor.getSampleTime() / 1000;
-                  // Log.d( TAG, String.format( Locale.US, "seeking extractor to %d, sample time is now %d", mSeekToMs, mExtractor.getSampleTime() ) );
-                  mDecoder.flush();
-                  mInputBuffers = mDecoder.getInputBuffers();
-                  mOutputBuffers = mDecoder.getOutputBuffers();
-
-                  mInfo = new BufferInfo();
+                  seekTo( mSeekToMs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC );
                   mSeekToMs = -1;
                }
 
@@ -342,6 +327,21 @@ public class MediaCodecDecodeController extends ControllerBase {
          mDecoder.stop();
          mDecoder.release();
          mExtractor.release();
+      }
+
+      private void seekTo( long ms, int seekMode ) {
+
+         // Log.d( TAG, String.format( Locale.US, "seeking to %d", ms ) );
+
+         mTimer.setTime( ms );
+         mExtractor.seekTo( ms * 1000, seekMode );
+         mCurrentPosition = (int) mExtractor.getSampleTime() / 1000;
+         // Log.d( TAG, String.format( Locale.US, "seeking extractor to %d, sample time is now %d", ms, mExtractor.getSampleTime() ) );
+         mDecoder.flush();
+         mInputBuffers = mDecoder.getInputBuffers();
+         mOutputBuffers = mDecoder.getOutputBuffers();
+
+         mInfo = new BufferInfo();
       }
 
       public void pause() {
