@@ -26,18 +26,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.roryhool.commonvideolibrary.Intents;
 import com.roryhool.commonvideolibrary.MediaHelper;
-import com.roryhool.commonvideolibrary.UriHelper;
 
 public class RotationActivity extends Activity {
-
-   private int SELECT_VIDEO_CODE = 100;
-
-   LinearLayout mSelectedVideoLayout;
 
    ImageView mVideoThumbnail;
 
@@ -47,16 +40,12 @@ public class RotationActivity extends Activity {
 
    Uri mUri;
 
-   public RotationActivity() {
-   }
-
    @Override
    public void onCreate( Bundle savedInstanceState ) {
       super.onCreate( savedInstanceState );
 
       setContentView( R.layout.activity_rotation );
 
-      mSelectedVideoLayout = (LinearLayout) findViewById( R.id.selected_video_layout );
       mVideoThumbnail = (ImageView) findViewById( R.id.selected_video_thumbnail );
 
       mVideoName = (TextView) findViewById( R.id.selected_video_name );
@@ -65,36 +54,33 @@ public class RotationActivity extends Activity {
       getActionBar().setTitle( "Rotation" );
    }
 
-   public void onSelectClicked( View view ) {
-      startActivityForResult( Intents.GetLaunchVideoChooserIntent( this ), SELECT_VIDEO_CODE );
+   @Override
+   public void onStart() {
+      super.onStart();
+
+      Uri uri = getIntent().getData();
+
+      if ( uri != null ) {
+         loadVideoUri( uri );
+      }
    }
 
-   @Override
-   public void onActivityResult( int requestCode, int resultCode, Intent data ) {
+   public void loadVideoUri( Uri uri ) {
 
-      if ( data != null ) {
+      mUri = uri;
 
-         mUri = data.getData();
+      Bitmap bitmap = MediaHelper.GetThumbnailFromVideo( mUri, 0 );
+      mVideoThumbnail.setImageBitmap( bitmap );
 
-         if ( mUri.getScheme().equals( "content" ) ) {
-            String path = UriHelper.ContentUriToFilePath( this, mUri );
-            mUri = Uri.parse( path );
-         }
+      File file = new File( mUri.toString() );
 
-         mSelectedVideoLayout.setVisibility( View.VISIBLE );
+      mVideoName.setText( file.getName() );
 
-         Bitmap bitmap = MediaHelper.GetThumbnailFromVideo( mUri, 0 );
-         mVideoThumbnail.setImageBitmap( bitmap );
+      int rotation = MediaHelper.GetRotation( mUri );
 
-         File file = new File( mUri.toString() );
+      mVideoRotation.setText( String.format( Locale.US, "Current Rotation: %d", rotation ) );
 
-         mVideoName.setText( file.getName() );
 
-         int rotation = MediaHelper.GetRotation( mUri );
-
-         mVideoRotation.setText( String.format( Locale.US, "Current Rotation: %d", rotation ) );
-
-      }
    }
 
    public void onRotateClicked( View view ) {

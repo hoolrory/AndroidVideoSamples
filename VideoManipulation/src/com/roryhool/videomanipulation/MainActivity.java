@@ -34,32 +34,73 @@ package com.roryhool.videomanipulation;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.LinearLayout;
+
+import com.roryhool.commonvideolibrary.Intents;
+import com.roryhool.commonvideolibrary.UriHelper;
 
 public class MainActivity extends Activity {
+
+   private int SELECT_VIDEO_CODE = 100;
+
+   LinearLayout mSelectedVideoLayout;
+
+   Uri mUri;
 
    @Override
    public void onCreate( Bundle savedInstanceState ) {
       super.onCreate( savedInstanceState );
 
       setContentView( R.layout.activity_main );
+
+      mSelectedVideoLayout = (LinearLayout) findViewById( R.id.selected_video_layout );
+   }
+
+   public void onSelectClicked( View view ) {
+      startActivityForResult( Intents.GetLaunchVideoChooserIntent( this ), SELECT_VIDEO_CODE );
+   }
+
+   @Override
+   public void onActivityResult( int requestCode, int resultCode, Intent data ) {
+
+      if ( data != null ) {
+
+         mUri = data.getData();
+
+         if ( mUri.getScheme().equals( "content" ) ) {
+            String path = UriHelper.ContentUriToFilePath( this, mUri );
+            mUri = Uri.parse( path );
+         }
+
+         mSelectedVideoLayout.setVisibility( View.VISIBLE );
+      }
    }
 
    public void onRotateClicked( View view ) {
-      startActivity( new Intent( this, RotationActivity.class ) );
+      Intent intent = new Intent( this, RotationActivity.class );
+      intent.setData( mUri );
+      startActivity( intent );
    }
 
    public void onJoinClicked( View view ) {
-      startActivity( new Intent( this, JoinActivity.class ) );
+      Intent intent = new Intent( this, JoinActivity.class );
+      intent.setData( mUri );
+      startActivity( intent );
    }
 
    public void onTrimClicked( View view ) {
-      startActivity( new Intent( this, TrimActivity.class ) );
+      Intent intent = new Intent( this, TrimActivity.class );
+      intent.setData( mUri );
+      startActivity( intent );
    }
 
    public void onDownsampleClicked( View view ) {
-      startActivity( new Intent( this, DownsampleActivity.class ) );
+      Intent intent = new Intent( this, DownsampleActivity.class );
+      intent.setData( mUri );
+      startActivity( intent );
    }
 
 }
