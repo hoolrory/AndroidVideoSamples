@@ -18,14 +18,38 @@ package com.roryhool.videoplayback;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.View;
+import android.view.WindowManager;
 
 public class DecodeWithMediaCodecActivity extends Activity {
+
+   VideoPlayerView mVideoPlayerView;
+
+   MediaCodecDecodeController mController;
 
    @Override
    public void onCreate( Bundle savedInstanceState ) {
       super.onCreate( savedInstanceState );
 
+      getActionBar().hide();
+      getWindow().getDecorView().setSystemUiVisibility( View.SYSTEM_UI_FLAG_LOW_PROFILE );
+      getWindow().setFlags( WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN );
+
       setContentView( R.layout.activity_decode_with_mediacodec );
+
+      mVideoPlayerView = (VideoPlayerView) findViewById( R.id.video_player );
+
+      mController = new MediaCodecDecodeController( this, mVideoPlayerView, mVideoPlayerView.getTextureView() );
+      mController.setVideoUri( getIntent().getData() );
+
+      mVideoPlayerView.setController( mController );
+      mController.setListener( mVideoPlayerView );
+   }
+
+   @Override
+   public void onPause() {
+      super.onPause();
+      mController.shutDown();
    }
 
 }

@@ -1,5 +1,8 @@
 <resources>
 
     <string name="app_name">VideoPlayback</string>
+    
+    <string name="play_description">Play and pause button</string>
+    <string name="fullscreen_description">Fullscreen button</string>
 
 </resources>

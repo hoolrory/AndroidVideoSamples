@@ -85,11 +85,15 @@ public class MainActivity extends Activity {
    }
 
    public void onClickPlayWithMediaPlayer( View view ) {
-      startActivity( new Intent( this, PlayWithMediaPlayerActivity.class ) );
+      Intent intent = new Intent( this, PlayWithMediaPlayerActivity.class );
+      intent.setData( mUri );
+      startActivity( intent );
    }
 
    public void onClickDecodeWithMediaCodec( View view ) {
-      startActivity( new Intent( this, DecodeWithMediaCodecActivity.class ) );
+      Intent intent = new Intent( this, DecodeWithMediaCodecActivity.class );
+      intent.setData( mUri );
+      startActivity( intent );
    }
 
 }

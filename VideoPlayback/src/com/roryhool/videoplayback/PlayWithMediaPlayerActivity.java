@@ -21,11 +21,22 @@ import android.os.Bundle;
 
 public class PlayWithMediaPlayerActivity extends Activity {
 
+   VideoPlayerView mVideoPlayerView;
+
    @Override
    public void onCreate( Bundle savedInstanceState ) {
       super.onCreate( savedInstanceState );
 
       setContentView( R.layout.activity_play_with_mediaplayer );
+
+      getActionBar().hide();
+      mVideoPlayerView = (VideoPlayerView) findViewById( R.id.video_player );
+
+      MediaPlayerController controller = new MediaPlayerController( this );
+      controller.setVideoUri( getIntent().getData() );
+
+      mVideoPlayerView.setController( controller );
+      controller.setListener( mVideoPlayerView );
    }
 
 }
