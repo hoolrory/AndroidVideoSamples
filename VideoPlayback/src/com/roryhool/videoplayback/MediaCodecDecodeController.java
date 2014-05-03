@@ -333,9 +333,9 @@ public class MediaCodecDecodeController extends ControllerBase {
 
          // Log.d( TAG, String.format( Locale.US, "seeking to %d", ms ) );
 
-         mTimer.setTime( ms );
          mExtractor.seekTo( ms * 1000, seekMode );
          mCurrentPosition = (int) mExtractor.getSampleTime() / 1000;
+         mTimer.setTime( mCurrentPosition );
          // Log.d( TAG, String.format( Locale.US, "seeking extractor to %d, sample time is now %d", ms, mExtractor.getSampleTime() ) );
          mDecoder.flush();
          mInputBuffers = mDecoder.getInputBuffers();
