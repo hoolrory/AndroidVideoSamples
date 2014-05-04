@@ -112,7 +112,7 @@ public class VideoResampler {
       mIFrameInterval = IFrameInterval;
    }
 
-   public void run() throws Throwable {
+   public void start() throws Throwable {
       VideoEditWrapper wrapper = new VideoEditWrapper();
       Thread th = new Thread( wrapper, "codec test" );
       th.start();

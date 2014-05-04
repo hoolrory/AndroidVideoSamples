@@ -94,7 +94,7 @@ public class ResampleActivity extends Activity {
          mTest.setOutputBitRate( VideoResampler.BITRATE_720P );
 
          try {
-            mTest.run();
+            mTest.start();
          } catch ( Throwable e ) {
             e.printStackTrace();
          }
