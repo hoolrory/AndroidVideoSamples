@@ -76,14 +76,14 @@ public class DownsampleActivity extends Activity {
       new DownsampleTask().execute( (Void) null );
    }
 
-   DecodeEditEncodeTest mTest;
+   VideoDownsampler mTest;
 
    class DownsampleTask extends AsyncTask<Void, Void, Void> {
 
       @Override
       protected Void doInBackground( Void... params ) {
 
-         mTest = new DecodeEditEncodeTest();
+         mTest = new VideoDownsampler();
          try {
             mTest.testVideoEditQCIF();
          } catch ( Throwable e ) {

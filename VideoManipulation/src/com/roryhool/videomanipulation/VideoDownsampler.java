@@ -33,7 +33,7 @@ import android.os.Build;
 import android.util.Log;
 
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
-public class DecodeEditEncodeTest {
+public class VideoDownsampler {
 
    private static final String TAG = "DecodeEditEncode";
    private static final boolean WORK_AROUND_BUGS = false; // avoid fatal codec bugs
@@ -81,9 +81,9 @@ public class DecodeEditEncodeTest {
     */
    private static class VideoEditWrapper implements Runnable {
       private Throwable mThrowable;
-      private DecodeEditEncodeTest mTest;
+      private VideoDownsampler mTest;
 
-      private VideoEditWrapper( DecodeEditEncodeTest test ) {
+      private VideoEditWrapper( VideoDownsampler test ) {
          mTest = test;
       }
 
@@ -97,7 +97,7 @@ public class DecodeEditEncodeTest {
       }
 
       /** Entry point. */
-      public static void runTest( DecodeEditEncodeTest obj ) throws Throwable {
+      public static void runTest( VideoDownsampler obj ) throws Throwable {
          VideoEditWrapper wrapper = new VideoEditWrapper( obj );
          Thread th = new Thread( wrapper, "codec test" );
          th.start();
