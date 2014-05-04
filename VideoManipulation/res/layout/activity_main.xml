@@ -17,32 +17,45 @@
 	    android:layout_height="match_parent"
 	    android:orientation="vertical"
 	    android:visibility="gone" >
+        
+	    <ImageView
+	        android:id="@+id/selected_video_thumbnail"
+	        android:layout_width="wrap_content"
+	        android:layout_height="200dip"
+	        android:contentDescription="@string/selected_video_thumbnail"
+	        android:layout_gravity="center_horizontal" />
+	    
+	    <TextView
+	        android:id="@+id/selected_video_name"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_marginBottom="10dip" />
 	    
 	    <Button
 	        android:id="@+id/rotate_button"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
+	        android:layout_width="match_parent"
+	        android:layout_height="48dip"
 	        android:text="@string/rotate_video"
 	        android:onClick="onRotateClicked" />
 	    
 	    <Button
 	        android:id="@+id/join_button"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
+           android:layout_width="match_parent"
+           android:layout_height="48dip"
 	        android:text="@string/join_videos"
 	        android:onClick="onJoinClicked" />
 	    
 	    <Button
 	        android:id="@+id/trim_button"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
+           android:layout_width="match_parent"
+           android:layout_height="48dip"
 	        android:text="@string/trim_video"
 	        android:onClick="onTrimClicked" />
 	    
 	    <Button
 	        android:id="@+id/resample_button"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
+           android:layout_width="match_parent"
+           android:layout_height="48dip"
 	        android:text="@string/resample_video"
 	        android:onClick="onResampleClicked" />
 	    
