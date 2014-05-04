@@ -33,7 +33,9 @@
 package com.roryhool.videomanipulation;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -43,6 +45,8 @@ import com.roryhool.commonvideolibrary.Intents;
 import com.roryhool.commonvideolibrary.UriHelper;
 
 public class MainActivity extends Activity {
+
+   private static final String RECENT_VIDEO_KEY = "RECENT_VIDEO_KEY";
 
    private int SELECT_VIDEO_CODE = 100;
 
@@ -57,6 +61,12 @@ public class MainActivity extends Activity {
       setContentView( R.layout.activity_main );
 
       mSelectedVideoLayout = (LinearLayout) findViewById( R.id.selected_video_layout );
+
+      SharedPreferences settings = getPreferences( Context.MODE_PRIVATE );
+      String video = settings.getString( RECENT_VIDEO_KEY, null );
+      if ( video != null ) {
+         loadUri( Uri.parse( video ) );
+      }
    }
 
    public void onSelectClicked( View view ) {
@@ -65,10 +75,19 @@ public class MainActivity extends Activity {
 
    @Override
    public void onActivityResult( int requestCode, int resultCode, Intent data ) {
+      loadUri( data.getData() );
+   }
 
-      if ( data != null ) {
+   private void loadUri( Uri uri ) {
 
-         mUri = data.getData();
+      if ( uri != null ) {
+
+         SharedPreferences settings = getPreferences( Context.MODE_PRIVATE );
+         SharedPreferences.Editor editor = settings.edit();
+         editor.putString( RECENT_VIDEO_KEY, uri.toString() );
+         editor.apply();
+
+         mUri = uri;
 
          if ( mUri.getScheme().equals( "content" ) ) {
             String path = UriHelper.ContentUriToFilePath( this, mUri );
