@@ -49,15 +49,21 @@ public class VideoResampler {
    private static final boolean VERBOSE = true; // lots of logging
 
    // parameters for the encoder
-   private static final String MIME_TYPE = "video/avc"; // H.264 Advanced Video Coding
-   private static final int FRAME_RATE = 15; // 15fps
-   private static final int IFRAME_INTERVAL = 10; // 10 seconds between I-frames
+   public static final String MIME_TYPE = "video/avc"; // H.264 Advanced Video Coding
+   public static final int FPS_30 = 30; // 30fps
+   public static final int FPS_15 = 15; // 15fps
+   public static final int IFRAME_INTERVAL_10 = 10; // 10 seconds between I-frames
 
    // size of a frame, in pixels
    private int mWidth = WIDTH_720P;
    private int mHeight = HEIGHT_720P;
+
    // bit rate, in bits per second
    private int mBitRate = BITRATE_720P;
+
+   private int mFrameRate = FPS_30;
+
+   private int mIFrameInterval = IFRAME_INTERVAL_10;
 
    private Uri mInputUri;
    private Uri mOutputUri;
@@ -86,6 +92,14 @@ public class VideoResampler {
       mBitRate = bitRate;
    }
 
+   public void setOutputFrameRate( int frameRate ) {
+      mFrameRate = frameRate;
+   }
+
+   public void setOutputIFrameInterval( int IFrameInterval ) {
+      mIFrameInterval = IFrameInterval;
+   }
+
    public void run() throws Throwable {
       VideoEditWrapper wrapper = new VideoEditWrapper();
       Thread th = new Thread( wrapper, "codec test" );
@@ -97,7 +111,7 @@ public class VideoResampler {
    }
 
    /**
-    * Wraps testEditVideo, running it in a new thread. Required because of the way 
+    * Wraps resampleVideo, running it in a new thread. Required because of the way 
     * SurfaceTexture.OnFrameAvailableListener works when the current thread has a Looper configured.
     */
    private class VideoEditWrapper implements Runnable {
@@ -112,12 +126,7 @@ public class VideoResampler {
          }
       }
    }
-
-   /**
-    * Edits a video file, saving the contents to a new file. This involves decoding and re-encoding, not to mention conversions between YUV and RGB, and so may be lossy.
-    * <p>
-    * If we recognize the decoded format we can do this in Java code using the ByteBuffer[] output, but it's not practical to support all OEM formats. By using a SurfaceTexture for output and a Surface for input, we can avoid issues with obscure formats and can use a fragment shader to do transformations.
-    */
+   
    private void resampleVideo() {
       if ( VERBOSE )
          Log.d( TAG, "resampleVideo " + mWidth + "x" + mHeight );
@@ -153,20 +162,19 @@ public class VideoResampler {
 
          mExtractFormat = mExtractor.getTrackFormat( mExtractIndex );
 
-         // Create an encoder format that matches the input format. (Might be able to just
-         // re-use the format used to generate the video, since we want it to be the same.)
          MediaFormat outputFormat = MediaFormat.createVideoFormat( MIME_TYPE, mWidth, mHeight );
          outputFormat.setInteger( MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface );
          outputFormat.setInteger( MediaFormat.KEY_BIT_RATE, mBitRate );
       
-         outputFormat.setInteger( MediaFormat.KEY_FRAME_RATE, FRAME_RATE );
-         outputFormat.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL );
+         outputFormat.setInteger( MediaFormat.KEY_FRAME_RATE, mFrameRate );
+         outputFormat.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, mIFrameInterval );
+
          encoder = MediaCodec.createEncoderByType( MIME_TYPE );
          encoder.configure( outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE );
          inputSurface = new InputSurface( encoder.createInputSurface() );
          inputSurface.makeCurrent();
          encoder.start();
-         // OutputSurface uses the EGL context created by InputSurface.
+
          decoder = MediaCodec.createDecoderByType( MIME_TYPE );
          outputSurface = new OutputSurface();
 
