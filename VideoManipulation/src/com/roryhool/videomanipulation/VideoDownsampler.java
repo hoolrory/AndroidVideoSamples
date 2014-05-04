@@ -17,9 +17,6 @@ package com.roryhool.videomanipulation;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-
-import javax.microedition.khronos.opengles.GL10;
 
 import android.annotation.TargetApi;
 import android.media.MediaCodec;
@@ -28,12 +25,23 @@ import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaMuxer;
-import android.opengl.GLES20;
 import android.os.Build;
 import android.util.Log;
 
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
 public class VideoDownsampler {
+
+   public static final int WIDTH_QCIF = 176;
+   public static final int HEIGHT_QCIF = 144;
+   public static final int BITRATE_QCIF = 1000000;
+
+   public static final int WIDTH_QVGA = 320;
+   public static final int HEIGHT_QVGA = 240;
+   public static final int BITRATE_QVGA = 2000000;
+
+   public static final int WIDTH_720P = 1280;
+   public static final int HEIGHT_720P = 720;
+   public static final int BITRATE_720P = 6000000;
 
    private static final String TAG = "DecodeEditEncode";
    private static final boolean WORK_AROUND_BUGS = false; // avoid fatal codec bugs
@@ -44,88 +52,57 @@ public class VideoDownsampler {
    private static final int FRAME_RATE = 15; // 15fps
    private static final int IFRAME_INTERVAL = 10; // 10 seconds between I-frames
 
-   private static final int TEST_R0 = 0; // dull green background
-   private static final int TEST_G0 = 136;
-   private static final int TEST_B0 = 0;
-   private static final int TEST_R1 = 236; // pink; BT.601 YUV {120,160,200}
-   private static final int TEST_G1 = 50;
-   private static final int TEST_B1 = 186;
-   // Replaces TextureRender.FRAGMENT_SHADER during edit; swaps green and blue channels.
-   private static final String FRAGMENT_SHADER = "#extension GL_OES_EGL_image_external : require\n" + "precision mediump float;\n" + "varying vec2 vTextureCoord;\n" + "uniform samplerExternalOES sTexture;\n" + "void main() {\n" + "  gl_FragColor = texture2D(sTexture, vTextureCoord).rbga;\n" + "}\n";
-
    // size of a frame, in pixels
-   private int mWidth = -1;
-   private int mHeight = -1;
+   private int mWidth = WIDTH_720P;
+   private int mHeight = HEIGHT_720P;
    // bit rate, in bits per second
-   private int mBitRate = -1;
-   // largest color component delta seen (i.e. actual vs. expected)
-   private int mLargestColorDelta;
+   private int mBitRate = BITRATE_720P;
 
-   public void testVideoEditQCIF() throws Throwable {
-      setParameters( 176, 144, 1000000 );
-      VideoEditWrapper.runTest( this );
+   public VideoDownsampler() {
+
    }
 
-   public void testVideoEditQVGA() throws Throwable {
-      setParameters( 320, 240, 2000000 );
-      VideoEditWrapper.runTest( this );
-   }
-
-   public void testVideoEdit720p() throws Throwable {
-      setParameters( 1280, 720, 6000000 );
-      VideoEditWrapper.runTest( this );
-   }
-
-   /**
-    * Wraps testEditVideo, running it in a new thread. Required because of the way SurfaceTexture.OnFrameAvailableListener works when the current thread has a Looper configured.
-    */
-   private static class VideoEditWrapper implements Runnable {
-      private Throwable mThrowable;
-      private VideoDownsampler mTest;
-
-      private VideoEditWrapper( VideoDownsampler test ) {
-         mTest = test;
-      }
-
-      @Override
-      public void run() {
-         try {
-            mTest.videoEditTest();
-         } catch ( Throwable th ) {
-            mThrowable = th;
-         }
-      }
-
-      /** Entry point. */
-      public static void runTest( VideoDownsampler obj ) throws Throwable {
-         VideoEditWrapper wrapper = new VideoEditWrapper( obj );
-         Thread th = new Thread( wrapper, "codec test" );
-         th.start();
-         th.join();
-         if ( wrapper.mThrowable != null ) {
-            throw wrapper.mThrowable;
-         }
-      }
-   }
-
-   /**
-    * Sets the desired frame size and bit rate.
-    */
-   private void setParameters( int width, int height, int bitRate ) {
+   public void setOutputResolution( int width, int height ) {
       if ( ( width % 16 ) != 0 || ( height % 16 ) != 0 ) {
          Log.w( TAG, "WARNING: width or height not multiple of 16" );
       }
       mWidth = width;
       mHeight = height;
+   }
+
+   public void setOutputBitRate( int bitRate ) {
       mBitRate = bitRate;
    }
 
+   public void run() throws Throwable {
+      VideoEditWrapper wrapper = new VideoEditWrapper();
+      Thread th = new Thread( wrapper, "codec test" );
+      th.start();
+      th.join();
+      if ( wrapper.mThrowable != null ) {
+         throw wrapper.mThrowable;
+      }
+   }
+
+   /**
+    * Wraps testEditVideo, running it in a new thread. Required because of the way 
+    * SurfaceTexture.OnFrameAvailableListener works when the current thread has a Looper configured.
+    */
+   private class VideoEditWrapper implements Runnable {
+      private Throwable mThrowable;
+
+      @Override
+      public void run() {
+         try {
+            videoEditTest();
+         } catch ( Throwable th ) {
+            mThrowable = th;
+         }
+      }
+   }
+
    private void videoEditTest() {
-      VideoChunks sourceChunks = new VideoChunks();
-
-      VideoChunks destChunks = editVideoFile( sourceChunks );
-
-      checkVideoFile( destChunks );
+      editVideoFile();
    }
 
    /**
@@ -133,10 +110,9 @@ public class VideoDownsampler {
     * <p>
     * If we recognize the decoded format we can do this in Java code using the ByteBuffer[] output, but it's not practical to support all OEM formats. By using a SurfaceTexture for output and a Surface for input, we can avoid issues with obscure formats and can use a fragment shader to do transformations.
     */
-   private VideoChunks editVideoFile( VideoChunks inputData ) {
+   private void editVideoFile() {
       if ( VERBOSE )
          Log.d( TAG, "editVideoFile " + mWidth + "x" + mHeight );
-      VideoChunks outputData = new VideoChunks();
       MediaCodec decoder = null;
       MediaCodec encoder = null;
       InputSurface inputSurface = null;
@@ -178,7 +154,6 @@ public class VideoDownsampler {
       
          outputFormat.setInteger( MediaFormat.KEY_FRAME_RATE, FRAME_RATE );
          outputFormat.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL );
-         outputData.setMediaFormat( outputFormat );
          encoder = MediaCodec.createEncoderByType( MIME_TYPE );
          encoder.configure( outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE );
          inputSurface = new InputSurface( encoder.createInputSurface() );
@@ -191,7 +166,7 @@ public class VideoDownsampler {
 
          decoder.configure( mExtractFormat, outputSurface.getSurface(), null, 0 );
          decoder.start();
-         editVideoData( inputData, decoder, outputSurface, inputSurface, encoder, outputData );
+         editVideoData( decoder, outputSurface, inputSurface, encoder );
       } finally {
          if ( VERBOSE )
             Log.d( TAG, "shutting down encoder, decoder" );
@@ -221,7 +196,6 @@ public class VideoDownsampler {
             mMuxer = null;
          }
       }
-      return outputData;
    }
 
    MediaMuxer mMuxer = null;
@@ -236,7 +210,7 @@ public class VideoDownsampler {
 
    int mVideoDuration = 0;
 
-   private void editVideoData( VideoChunks inputData, MediaCodec decoder, OutputSurface outputSurface, InputSurface inputSurface, MediaCodec encoder, VideoChunks outputData ) {
+   private void editVideoData( MediaCodec decoder, OutputSurface outputSurface, InputSurface inputSurface, MediaCodec encoder ) {
       final int TIMEOUT_USEC = 10000;
       ByteBuffer[] decoderInputBuffers = decoder.getInputBuffers();
       ByteBuffer[] encoderOutputBuffers = encoder.getOutputBuffers();
@@ -265,9 +239,6 @@ public class VideoDownsampler {
                   // the BUFFER_FLAG_CODEC_CONFIG flag set.
                   ByteBuffer inputBuf = decoderInputBuffers[inputBufIndex];
                   inputBuf.clear();
-                  // inputData.getChunkData( inputChunk, inputBuf );
-                  // int flags = inputData.getChunkFlags( inputChunk );
-                  // long time = inputData.getChunkTime( inputChunk );
 
                   int sampleSize = mExtractor.readSampleData( inputBuf, 0 );
                   if ( sampleSize < 0 ) {
@@ -334,7 +305,6 @@ public class VideoDownsampler {
                if ( info.size != 0 ) {
                   encodedData.position( info.offset );
                   encodedData.limit( info.offset + info.size );
-                  outputData.addChunk( encodedData, info.flags, info.presentationTimeUs );
                   outputCount++;
 
                   mMuxer.writeSampleData( mTrackIndex, encodedData, info );
@@ -415,253 +385,9 @@ public class VideoDownsampler {
    }
 
    /**
-    * Checks the video file to see if the contents match our expectations. We decode the video to a Surface and check the pixels with GL.
-    */
-   private void checkVideoFile( VideoChunks inputData ) {
-      OutputSurface surface = null;
-      MediaCodec decoder = null;
-      mLargestColorDelta = -1;
-      if ( VERBOSE )
-         Log.d( TAG, "checkVideoFile" );
-      try {
-         surface = new OutputSurface( mWidth, mHeight );
-         MediaFormat format = inputData.getMediaFormat();
-         decoder = MediaCodec.createDecoderByType( MIME_TYPE );
-         decoder.configure( format, surface.getSurface(), null, 0 );
-         decoder.start();
-         int badFrames = checkVideoData( inputData, decoder, surface );
-         if ( badFrames != 0 ) {
-            // fail( "Found " + badFrames + " bad frames" );
-         }
-      } finally {
-         if ( surface != null ) {
-            surface.release();
-         }
-         if ( decoder != null ) {
-            decoder.stop();
-            decoder.release();
-         }
-         Log.i( TAG, "Largest color delta: " + mLargestColorDelta );
-      }
-   }
-
-   /**
-    * Checks the video data.
-    * 
-    * @return the number of bad frames
-    */
-   private int checkVideoData( VideoChunks inputData, MediaCodec decoder, OutputSurface surface ) {
-      final int TIMEOUT_USEC = 1000;
-      ByteBuffer[] decoderInputBuffers = decoder.getInputBuffers();
-      ByteBuffer[] decoderOutputBuffers = decoder.getOutputBuffers();
-      MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-      int inputChunk = 0;
-      int checkIndex = 0;
-      int badFrames = 0;
-      boolean outputDone = false;
-      boolean inputDone = false;
-      while ( !outputDone ) {
-         if ( VERBOSE )
-            Log.d( TAG, "check loop" );
-         // Feed more data to the decoder.
-         if ( !inputDone ) {
-            int inputBufIndex = decoder.dequeueInputBuffer( TIMEOUT_USEC );
-            if ( inputBufIndex >= 0 ) {
-               if ( inputChunk == inputData.getNumChunks() ) {
-                  // End of stream -- send empty frame with EOS flag set.
-                  decoder.queueInputBuffer( inputBufIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM );
-                  inputDone = true;
-                  if ( VERBOSE )
-                     Log.d( TAG, "sent input EOS" );
-               } else {
-                  // Copy a chunk of input to the decoder. The first chunk should have
-                  // the BUFFER_FLAG_CODEC_CONFIG flag set.
-                  ByteBuffer inputBuf = decoderInputBuffers[inputBufIndex];
-                  inputBuf.clear();
-                  inputData.getChunkData( inputChunk, inputBuf );
-                  int flags = inputData.getChunkFlags( inputChunk );
-                  long time = inputData.getChunkTime( inputChunk );
-                  decoder.queueInputBuffer( inputBufIndex, 0, inputBuf.position(), time, flags );
-                  if ( VERBOSE ) {
-                     Log.d( TAG, "submitted frame " + inputChunk + " to dec, size=" + inputBuf.position() + " flags=" + flags );
-                  }
-                  inputChunk++;
-               }
-            } else {
-               if ( VERBOSE )
-                  Log.d( TAG, "input buffer not available" );
-            }
-         }
-         if ( !outputDone ) {
-            int decoderStatus = decoder.dequeueOutputBuffer( info, TIMEOUT_USEC );
-            if ( decoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER ) {
-               // no output available yet
-               if ( VERBOSE )
-                  Log.d( TAG, "no output from decoder available" );
-            } else if ( decoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED ) {
-               decoderOutputBuffers = decoder.getOutputBuffers();
-               if ( VERBOSE )
-                  Log.d( TAG, "decoder output buffers changed" );
-            } else if ( decoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED ) {
-               MediaFormat newFormat = decoder.getOutputFormat();
-               if ( VERBOSE )
-                  Log.d( TAG, "decoder output format changed: " + newFormat );
-            } else if ( decoderStatus < 0 ) {
-               // fail( "unexpected result from decoder.dequeueOutputBuffer: " + decoderStatus );
-            } else { // decoderStatus >= 0
-               ByteBuffer decodedData = decoderOutputBuffers[decoderStatus];
-               if ( VERBOSE )
-                  Log.d( TAG, "surface decoder given buffer " + decoderStatus + " (size=" + info.size + ")" );
-               if ( ( info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM ) != 0 ) {
-                  if ( VERBOSE )
-                     Log.d( TAG, "output EOS" );
-                  outputDone = true;
-               }
-               boolean doRender = ( info.size != 0 );
-               // As soon as we call releaseOutputBuffer, the buffer will be forwarded
-               // to SurfaceTexture to convert to a texture. The API doesn't guarantee
-               // that the texture will be available before the call returns, so we
-               // need to wait for the onFrameAvailable callback to fire.
-               decoder.releaseOutputBuffer( decoderStatus, doRender );
-               if ( doRender ) {
-                  if ( VERBOSE )
-                     Log.d( TAG, "awaiting frame " + checkIndex );
-                  // assertEquals( "Wrong time stamp", computePresentationTime( checkIndex ), info.presentationTimeUs );
-                  surface.awaitNewImage();
-                  surface.drawImage();
-                  if ( !checkSurfaceFrame( checkIndex++ ) ) {
-                     badFrames++;
-                  }
-               }
-            }
-         }
-      }
-      return badFrames;
-   }
-
-   /**
-    * Checks the frame for correctness, using GL to check RGB values.
-    * 
-    * @return true if the frame looks good
-    */
-   private boolean checkSurfaceFrame( int frameIndex ) {
-      ByteBuffer pixelBuf = ByteBuffer.allocateDirect( 4 ); // TODO - reuse this
-      boolean frameFailed = false;
-      for ( int i = 0; i < 8; i++ ) {
-         // Note the coordinates are inverted on the Y-axis in GL.
-         int x, y;
-         if ( i < 4 ) {
-            x = i * ( mWidth / 4 ) + ( mWidth / 8 );
-            y = ( mHeight * 3 ) / 4;
-         } else {
-            x = ( 7 - i ) * ( mWidth / 4 ) + ( mWidth / 8 );
-            y = mHeight / 4;
-         }
-         GLES20.glReadPixels( x, y, 1, 1, GL10.GL_RGBA, GL10.GL_UNSIGNED_BYTE, pixelBuf );
-         int r = pixelBuf.get( 0 ) & 0xff;
-         int g = pixelBuf.get( 1 ) & 0xff;
-         int b = pixelBuf.get( 2 ) & 0xff;
-         // Log.d(TAG, "GOT(" + frameIndex + "/" + i + "): r=" + r + " g=" + g + " b=" + b);
-         int expR, expG, expB;
-         if ( i == frameIndex % 8 ) {
-            // colored rect (green/blue swapped)
-            expR = TEST_R1;
-            expG = TEST_B1;
-            expB = TEST_G1;
-         } else {
-            // zero background color (green/blue swapped)
-            expR = TEST_R0;
-            expG = TEST_B0;
-            expB = TEST_G0;
-         }
-         if ( !isColorClose( r, expR ) || !isColorClose( g, expG ) || !isColorClose( b, expB ) ) {
-            Log.w( TAG, "Bad frame " + frameIndex + " (rect=" + i + ": rgb=" + r + "," + g + "," + b + " vs. expected " + expR + "," + expG + "," + expB + ")" );
-            frameFailed = true;
-         }
-      }
-      return !frameFailed;
-   }
-
-   /**
-    * Returns true if the actual color value is close to the expected color value. Updates mLargestColorDelta.
-    */
-   boolean isColorClose( int actual, int expected ) {
-      final int MAX_DELTA = 8;
-      int delta = Math.abs( actual - expected );
-      if ( delta > mLargestColorDelta ) {
-         mLargestColorDelta = delta;
-      }
-      return ( delta <= MAX_DELTA );
-   }
-
-   /**
     * Generates the presentation time for frame N, in microseconds.
     */
    private static long computePresentationTime( int frameIndex ) {
       return 123 + frameIndex * 1000000 / FRAME_RATE;
-   }
-
-   /**
-    * The elementary stream coming out of the "video/avc" encoder needs to be fed back into the decoder one chunk at a time. If we just wrote the data to a file, we would lose the information about chunk boundaries. This class stores the encoded data in memory, retaining the chunk organization.
-    */
-   private static class VideoChunks {
-      private MediaFormat mMediaFormat;
-      private ArrayList<byte[]> mChunks = new ArrayList<byte[]>();
-      private ArrayList<Integer> mFlags = new ArrayList<Integer>();
-      private ArrayList<Long> mTimes = new ArrayList<Long>();
-
-      /**
-       * Sets the MediaFormat, for the benefit of a future decoder.
-       */
-      public void setMediaFormat( MediaFormat format ) {
-         mMediaFormat = format;
-      }
-
-      /**
-       * Gets the MediaFormat that was used by the encoder.
-       */
-      public MediaFormat getMediaFormat() {
-         return mMediaFormat;
-      }
-
-      /**
-       * Adds a new chunk. Advances buf.position to buf.limit.
-       */
-      public void addChunk( ByteBuffer buf, int flags, long time ) {
-         byte[] data = new byte[buf.remaining()];
-         buf.get( data );
-         mChunks.add( data );
-         mFlags.add( flags );
-         mTimes.add( time );
-      }
-
-      /**
-       * Returns the number of chunks currently held.
-       */
-      public int getNumChunks() {
-         return mChunks.size();
-      }
-
-      /**
-       * Copies the data from chunk N into "dest". Advances dest.position.
-       */
-      public void getChunkData( int chunk, ByteBuffer dest ) {
-         byte[] data = mChunks.get( chunk );
-         dest.put( data );
-      }
-
-      /**
-       * Returns the flags associated with chunk N.
-       */
-      public int getChunkFlags( int chunk ) {
-         return mFlags.get( chunk );
-      }
-
-      /**
-       * Returns the timestamp associated with chunk N.
-       */
-      public long getChunkTime( int chunk ) {
-         return mTimes.get( chunk );
-      }
    }
 }

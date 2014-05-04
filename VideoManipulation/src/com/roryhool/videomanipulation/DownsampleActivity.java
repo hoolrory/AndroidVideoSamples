@@ -84,10 +84,10 @@ public class DownsampleActivity extends Activity {
       protected Void doInBackground( Void... params ) {
 
          mTest = new VideoDownsampler();
+         mTest.setOutputResolution( VideoDownsampler.WIDTH_720P, VideoDownsampler.HEIGHT_720P );
          try {
-            mTest.testVideoEditQCIF();
+            mTest.run();
          } catch ( Throwable e ) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
          }
          return null;
