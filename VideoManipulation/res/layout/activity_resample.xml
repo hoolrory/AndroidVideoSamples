@@ -7,7 +7,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="48dip"
-        android:text="Downsample"
-        android:onClick="onDownsampleClicked" />
+        android:text="Resample"
+        android:onClick="onResampleClicked" />
 
 </LinearLayout>

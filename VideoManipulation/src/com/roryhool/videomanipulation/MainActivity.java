@@ -97,8 +97,8 @@ public class MainActivity extends Activity {
       startActivity( intent );
    }
 
-   public void onDownsampleClicked( View view ) {
-      Intent intent = new Intent( this, DownsampleActivity.class );
+   public void onResampleClicked( View view ) {
+      Intent intent = new Intent( this, ResampleActivity.class );
       intent.setData( mUri );
       startActivity( intent );
    }

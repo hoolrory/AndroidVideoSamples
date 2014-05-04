@@ -33,7 +33,7 @@ import android.os.Bundle;
 import android.view.View;
 
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
-public class DownsampleActivity extends Activity {
+public class ResampleActivity extends Activity {
 
    Uri mInputUri = Uri.parse( "/mnt/sdcard/test2.mp4" );
    Uri mOutputUri;
@@ -60,7 +60,7 @@ public class DownsampleActivity extends Activity {
    public void onCreate( Bundle savedInstanceState ) {
       super.onCreate( savedInstanceState );
 
-      setContentView( R.layout.activity_downsample );
+      setContentView( R.layout.activity_resample );
 
       Uri data = getIntent().getData();
 
@@ -76,22 +76,22 @@ public class DownsampleActivity extends Activity {
 
    }
 
-   public void onDownsampleClicked( View view ) {
-      new DownsampleTask().execute( (Void) null );
+   public void onResampleClicked( View view ) {
+      new ResampleTask().execute( (Void) null );
    }
 
-   VideoDownsampler mTest;
+   VideoResampler mTest;
 
-   class DownsampleTask extends AsyncTask<Void, Void, Void> {
+   class ResampleTask extends AsyncTask<Void, Void, Void> {
 
       @Override
       protected Void doInBackground( Void... params ) {
 
-         mTest = new VideoDownsampler();
+         mTest = new VideoResampler();
          mTest.setInput( mInputUri );
          mTest.setOutput( mOutputUri );
-         mTest.setOutputResolution( VideoDownsampler.WIDTH_720P, VideoDownsampler.HEIGHT_720P );
-         mTest.setOutputBitRate( VideoDownsampler.BITRATE_720P );
+         mTest.setOutputResolution( VideoResampler.WIDTH_720P, VideoResampler.HEIGHT_720P );
+         mTest.setOutputBitRate( VideoResampler.BITRATE_720P );
 
          try {
             mTest.run();

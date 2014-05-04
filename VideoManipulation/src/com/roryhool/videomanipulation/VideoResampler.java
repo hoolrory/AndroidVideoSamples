@@ -30,7 +30,7 @@ import android.os.Build;
 import android.util.Log;
 
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
-public class VideoDownsampler {
+public class VideoResampler {
 
    public static final int WIDTH_QCIF = 176;
    public static final int HEIGHT_QCIF = 144;
@@ -44,7 +44,7 @@ public class VideoDownsampler {
    public static final int HEIGHT_720P = 720;
    public static final int BITRATE_720P = 6000000;
 
-   private static final String TAG = "DecodeEditEncode";
+   private static final String TAG = "VideoResampler";
    private static final boolean WORK_AROUND_BUGS = false; // avoid fatal codec bugs
    private static final boolean VERBOSE = true; // lots of logging
 
@@ -62,7 +62,7 @@ public class VideoDownsampler {
    private Uri mInputUri;
    private Uri mOutputUri;
 
-   public VideoDownsampler() {
+   public VideoResampler() {
 
    }
 
