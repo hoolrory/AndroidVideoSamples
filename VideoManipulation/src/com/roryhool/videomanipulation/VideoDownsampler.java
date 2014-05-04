@@ -25,6 +25,7 @@ import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaMuxer;
+import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 
@@ -58,8 +59,19 @@ public class VideoDownsampler {
    // bit rate, in bits per second
    private int mBitRate = BITRATE_720P;
 
+   private Uri mInputUri;
+   private Uri mOutputUri;
+
    public VideoDownsampler() {
 
+   }
+
+   public void setInput( Uri intputUri ) {
+      mInputUri = intputUri;
+   }
+
+   public void setOutput( Uri outputUri ) {
+      mOutputUri = outputUri;
    }
 
    public void setOutputResolution( int width, int height ) {
@@ -117,13 +129,13 @@ public class VideoDownsampler {
 
          mExtractor = new MediaExtractor();
          try {
-            mExtractor.setDataSource( "/mnt/sdcard/test2.mp4" );
+            mExtractor.setDataSource( mInputUri.toString() );
          } catch ( IOException e ) {
             e.printStackTrace();
          }
 
          MediaMetadataRetriever r = new MediaMetadataRetriever();
-         r.setDataSource( "/mnt/sdcard/test2.mp4" );
+         r.setDataSource( mInputUri.toString() );
          mVideoDuration = Integer.parseInt( r.extractMetadata( MediaMetadataRetriever.METADATA_KEY_DURATION ) );
 
          for ( int trackIndex = 0; trackIndex < mExtractor.getTrackCount(); trackIndex++ ) {
@@ -270,7 +282,7 @@ public class VideoDownsampler {
             } else if ( encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED ) {
 
                try {
-                  mMuxer = new MediaMuxer( "/mnt/sdcard/testASDF.mp4", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4 );
+                  mMuxer = new MediaMuxer( mOutputUri.toString(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4 );
                } catch ( IOException ioe ) {
                   throw new RuntimeException( "MediaMuxer creation failed", ioe );
                }
