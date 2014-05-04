@@ -77,36 +77,41 @@ public class ResampleActivity extends Activity {
    }
 
    public void onResampleClicked( View view ) {
-      new ResampleTask().execute( (Void) null );
+      new ResampleTask().execute( mInputUri, mOutputUri );
    }
 
-   VideoResampler mTest;
-
-   class ResampleTask extends AsyncTask<Void, Void, Void> {
+   class ResampleTask extends AsyncTask<Uri, Void, Uri> {
 
       @Override
-      protected Void doInBackground( Void... params ) {
+      protected Uri doInBackground( Uri... uris ) {
 
-         mTest = new VideoResampler();
-         mTest.setInput( mInputUri );
-         mTest.setOutput( mOutputUri );
-         mTest.setOutputResolution( VideoResampler.WIDTH_720P, VideoResampler.HEIGHT_720P );
-         mTest.setOutputBitRate( VideoResampler.BITRATE_720P );
+         if ( uris.length < 2 ) {
+            return null;
+         }
+
+         Uri inputUri = uris[0];
+         Uri outputUri = uris[1];
+
+         VideoResampler resampler = new VideoResampler();
+         resampler.setInput( inputUri );
+         resampler.setOutput( outputUri );
+         resampler.setOutputResolution( VideoResampler.WIDTH_720P, VideoResampler.HEIGHT_720P );
+         resampler.setOutputBitRate( VideoResampler.BITRATE_720P );
 
          try {
-            mTest.start();
+            resampler.start();
          } catch ( Throwable e ) {
             e.printStackTrace();
          }
 
-         return null;
+         return outputUri;
       }
 
       @Override
-      protected void onPostExecute( Void v ) {
+      protected void onPostExecute( Uri outputUri ) {
          Intent sendIntent = new Intent();
          sendIntent.setAction( Intent.ACTION_VIEW );
-         sendIntent.setDataAndType( mOutputUri, "video/mp4" );
+         sendIntent.setDataAndType( outputUri, "video/mp4" );
          startActivity( sendIntent );
       }
    }
