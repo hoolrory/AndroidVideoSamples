@@ -29,6 +29,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 
+import com.roryhool.commonvideolibrary.MediaHelper;
+
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
 public class VideoResampler {
 
@@ -49,7 +51,6 @@ public class VideoResampler {
    private static final boolean VERBOSE = true; // lots of logging
 
    // parameters for the encoder
-   public static final String MIME_TYPE = "video/avc"; // H.264 Advanced Video Coding
    public static final int FPS_30 = 30; // 30fps
    public static final int FPS_15 = 15; // 15fps
    public static final int IFRAME_INTERVAL_10 = 10; // 10 seconds between I-frames
@@ -174,20 +175,20 @@ public class VideoResampler {
 
          mExtractFormat = mExtractor.getTrackFormat( mExtractIndex );
 
-         MediaFormat outputFormat = MediaFormat.createVideoFormat( MIME_TYPE, mWidth, mHeight );
+         MediaFormat outputFormat = MediaFormat.createVideoFormat( MediaHelper.MIME_TYPE_AVC, mWidth, mHeight );
          outputFormat.setInteger( MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface );
          outputFormat.setInteger( MediaFormat.KEY_BIT_RATE, mBitRate );
       
          outputFormat.setInteger( MediaFormat.KEY_FRAME_RATE, mFrameRate );
          outputFormat.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, mIFrameInterval );
 
-         encoder = MediaCodec.createEncoderByType( MIME_TYPE );
+         encoder = MediaCodec.createEncoderByType( MediaHelper.MIME_TYPE_AVC );
          encoder.configure( outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE );
          inputSurface = new InputSurface( encoder.createInputSurface() );
          inputSurface.makeCurrent();
          encoder.start();
 
-         decoder = MediaCodec.createDecoderByType( MIME_TYPE );
+         decoder = MediaCodec.createDecoderByType( MediaHelper.MIME_TYPE_AVC );
          outputSurface = new OutputSurface();
 
          decoder.configure( mExtractFormat, outputSurface.getSurface(), null, 0 );

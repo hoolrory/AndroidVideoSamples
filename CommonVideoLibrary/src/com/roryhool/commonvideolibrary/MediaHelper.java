@@ -38,6 +38,8 @@ import com.googlecode.mp4parser.util.Matrix;
 
 public class MediaHelper {
 
+   public static final String MIME_TYPE_AVC = "video/avc";
+
    public static Bitmap GetThumbnailFromVideo( Uri uri, long timeMs ) {
       MediaMetadataRetriever retriever = new MediaMetadataRetriever();
       retriever.setDataSource( uri.toString() );
@@ -97,7 +99,7 @@ public class MediaHelper {
          return value;
       }
       
-      MediaFormat format = GetTrackFormat( extractor, "video/avc" );
+      MediaFormat format = GetTrackFormat( extractor, MIME_TYPE_AVC );
       extractor.release();
 
       if ( format.containsKey( key ) ) {
@@ -111,7 +113,8 @@ public class MediaHelper {
    public static MediaFormat GetTrackFormat( MediaExtractor extractor, String mimeType ) {
       for ( int i = 0; i < extractor.getTrackCount(); i++ ) {
          MediaFormat format = extractor.getTrackFormat( i );
-         if ( format.getString( MediaFormat.KEY_MIME ).equals( mimeType ) ) {
+         String trackMimeType = format.getString( MediaFormat.KEY_MIME );
+         if ( mimeType.equals( trackMimeType ) ) {
             return format;
          }
       }
