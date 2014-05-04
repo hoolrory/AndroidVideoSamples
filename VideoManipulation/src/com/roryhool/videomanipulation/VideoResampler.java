@@ -68,6 +68,18 @@ public class VideoResampler {
    private Uri mInputUri;
    private Uri mOutputUri;
 
+   MediaMuxer mMuxer = null;
+   int mTrackIndex = -1;
+   boolean mMuxerStarted = false;
+
+   MediaExtractor mExtractor = null;
+
+   MediaFormat mExtractFormat = null;
+
+   int mExtractIndex = 0;
+
+   int mVideoDuration = 0;
+
    public VideoResampler() {
 
    }
@@ -211,18 +223,6 @@ public class VideoResampler {
          }
       }
    }
-
-   MediaMuxer mMuxer = null;
-   int mTrackIndex = -1;
-   boolean mMuxerStarted = false;
-
-   MediaExtractor mExtractor = null;
-
-   MediaFormat mExtractFormat = null;
-
-   int mExtractIndex = 0;
-
-   int mVideoDuration = 0;
 
    private void resampleVideo( MediaCodec decoder, OutputSurface outputSurface, InputSurface inputSurface, MediaCodec encoder ) {
       final int TIMEOUT_USEC = 10000;
