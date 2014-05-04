@@ -15,9 +15,6 @@
  */
 package com.roryhool.videomanipulation;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -41,14 +38,12 @@ public class DecodeEditEncodeTest {
    private static final String TAG = "DecodeEditEncode";
    private static final boolean WORK_AROUND_BUGS = false; // avoid fatal codec bugs
    private static final boolean VERBOSE = true; // lots of logging
-   private static final boolean DEBUG_SAVE_FILE = true; // save copy of encoded movie
-   private static final String DEBUG_FILE_NAME_BASE = "/sdcard/test/";
+
    // parameters for the encoder
    private static final String MIME_TYPE = "video/avc"; // H.264 Advanced Video Coding
    private static final int FRAME_RATE = 15; // 15fps
    private static final int IFRAME_INTERVAL = 10; // 10 seconds between I-frames
-   // movie length, in frames
-   private static final int NUM_FRAMES = 30; // two seconds of video
+
    private static final int TEST_R0 = 0; // dull green background
    private static final int TEST_G0 = 136;
    private static final int TEST_B0 = 0;
@@ -57,6 +52,7 @@ public class DecodeEditEncodeTest {
    private static final int TEST_B1 = 186;
    // Replaces TextureRender.FRAGMENT_SHADER during edit; swaps green and blue channels.
    private static final String FRAGMENT_SHADER = "#extension GL_OES_EGL_image_external : require\n" + "precision mediump float;\n" + "varying vec2 vTextureCoord;\n" + "uniform samplerExternalOES sTexture;\n" + "void main() {\n" + "  gl_FragColor = texture2D(sTexture, vTextureCoord).rbga;\n" + "}\n";
+
    // size of a frame, in pixels
    private int mWidth = -1;
    private int mHeight = -1;
@@ -666,38 +662,6 @@ public class DecodeEditEncodeTest {
        */
       public long getChunkTime( int chunk ) {
          return mTimes.get( chunk );
-      }
-
-      /**
-       * Writes the chunks to a file as a contiguous stream. Useful for debugging.
-       */
-      public void saveToFile( File file ) {
-         Log.d( TAG, "saving chunk data to file " + file );
-         FileOutputStream fos = null;
-         BufferedOutputStream bos = null;
-         try {
-            fos = new FileOutputStream( file );
-            bos = new BufferedOutputStream( fos );
-            fos = null; // closing bos will also close fos
-            int numChunks = getNumChunks();
-            for ( int i = 0; i < numChunks; i++ ) {
-               byte[] chunk = mChunks.get( i );
-               bos.write( chunk );
-            }
-         } catch ( IOException ioe ) {
-            throw new RuntimeException( ioe );
-         } finally {
-            try {
-               if ( bos != null ) {
-                  bos.close();
-               }
-               if ( fos != null ) {
-                  fos.close();
-               }
-            } catch ( IOException ioe ) {
-               throw new RuntimeException( ioe );
-            }
-         }
       }
    }
 }
