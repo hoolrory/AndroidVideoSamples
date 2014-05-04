@@ -18,6 +18,7 @@
         <activity
             android:name="com.roryhool.videomanipulation.MainActivity"
             android:label="@string/app_name" >
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -38,7 +39,7 @@
             android:label="@string/app_name" />
         
         <activity
-            android:name="com.roryhool.videomanipulation.DownsampleActivity"
+            android:name="com.roryhool.videomanipulation.ResampleActivity"
             android:label="@string/app_name" />
         
     </application>
