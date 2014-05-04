@@ -84,7 +84,6 @@ public class DownsampleActivity extends Activity {
       protected Void doInBackground( Void... params ) {
 
          mTest = new DecodeEditEncodeTest();
-         mTest.setContext( DownsampleActivity.this );
          try {
             mTest.testVideoEditQCIF();
          } catch ( Throwable e ) {

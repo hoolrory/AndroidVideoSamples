@@ -27,27 +27,17 @@ import javax.microedition.khronos.opengles.GL10;
 import android.annotation.TargetApi;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
-import android.media.MediaCodecList;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaMuxer;
 import android.opengl.GLES20;
 import android.os.Build;
-import android.test.AndroidTestCase;
 import android.util.Log;
 
-/**
- * This test has three steps:
- * <ol>
- * <li>Generate a video test stream.
- * <li>Decode the video from the stream, rendering frames into a SurfaceTexture. Render the texture onto a Surface that feeds a video encoder, modifying the output with a fragment shader.
- * <li>Decode the second video and compare it to the expected result.
- * </ol>
- * <p>
- * The second step is a typical scenario for video editing. We could do all this in one step, feeding data through multiple stages of MediaCodec, but at some point we're no longer exercising the code in the way we expect it to be used (and the code gets a bit unwieldy).
- */
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
-public class DecodeEditEncodeTest extends AndroidTestCase {
+public class DecodeEditEncodeTest {
+
    private static final String TAG = "DecodeEditEncode";
    private static final boolean WORK_AROUND_BUGS = false; // avoid fatal codec bugs
    private static final boolean VERBOSE = true; // lots of logging
@@ -134,230 +124,12 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
       mBitRate = bitRate;
    }
 
-   /**
-    * Tests editing of a video file with GL.
-    */
    private void videoEditTest() {
       VideoChunks sourceChunks = new VideoChunks();
-      if ( !generateVideoFile( sourceChunks ) ) {
-         // No AVC codec? Fail silently.
-         return;
-      }
-      if ( DEBUG_SAVE_FILE ) {
-         // Save a copy to a file. We call it ".mp4", but it's actually just an elementary
-         // stream, so not all video players will know what to do with it.
-         String dirName = getContext().getFilesDir().getAbsolutePath();
-         String fileName = "vedit1_" + mWidth + "x" + mHeight + ".mp4";
-         sourceChunks.saveToFile( new File( DEBUG_FILE_NAME_BASE, fileName ) );
-      }
+
       VideoChunks destChunks = editVideoFile( sourceChunks );
-      if ( DEBUG_SAVE_FILE ) {
-         String dirName = getContext().getFilesDir().getAbsolutePath();
-         String fileName = "vedit2_" + mWidth + "x" + mHeight + ".mp4";
-         destChunks.saveToFile( new File( DEBUG_FILE_NAME_BASE, fileName ) );
-      }
+
       checkVideoFile( destChunks );
-   }
-
-   /**
-    * Generates a test video file, saving it as VideoChunks. We generate frames with GL to avoid having to deal with multiple YUV formats.
-    * 
-    * @return true on success, false on "soft" failure
-    */
-   private boolean generateVideoFile( VideoChunks output ) {
-      if ( VERBOSE )
-         Log.d( TAG, "generateVideoFile " + mWidth + "x" + mHeight );
-      MediaCodec encoder = null;
-      InputSurface inputSurface = null;
-      try {
-         MediaCodecInfo codecInfo = selectCodec( MIME_TYPE );
-         if ( codecInfo == null ) {
-            // Don't fail CTS if they don't have an AVC codec (not here, anyway).
-            Log.e( TAG, "Unable to find an appropriate codec for " + MIME_TYPE );
-            return false;
-         }
-         if ( VERBOSE )
-            Log.d( TAG, "found codec: " + codecInfo.getName() );
-         // We avoid the device-specific limitations on width and height by using values that
-         // are multiples of 16, which all tested devices seem to be able to handle.
-         MediaFormat format = MediaFormat.createVideoFormat( MIME_TYPE, mWidth, mHeight );
-         // Set some properties. Failing to specify some of these can cause the MediaCodec
-         // configure() call to throw an unhelpful exception.
-         format.setInteger( MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface );
-         format.setInteger( MediaFormat.KEY_BIT_RATE, mBitRate );
-         format.setInteger( MediaFormat.KEY_FRAME_RATE, FRAME_RATE );
-         format.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL );
-         if ( VERBOSE )
-            Log.d( TAG, "format: " + format );
-         output.setMediaFormat( format );
-         // Create a MediaCodec for the desired codec, then configure it as an encoder with
-         // our desired properties.
-         encoder = MediaCodec.createEncoderByType( MIME_TYPE );
-         encoder.configure( format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE );
-         inputSurface = new InputSurface( encoder.createInputSurface() );
-         inputSurface.makeCurrent();
-         encoder.start();
-         generateVideoData( encoder, inputSurface, output );
-      } finally {
-         if ( encoder != null ) {
-            if ( VERBOSE )
-               Log.d( TAG, "releasing encoder" );
-            encoder.stop();
-            encoder.release();
-            if ( VERBOSE )
-               Log.d( TAG, "released encoder" );
-         }
-         if ( inputSurface != null ) {
-            inputSurface.release();
-         }
-      }
-      return true;
-   }
-
-   /**
-    * Returns the first codec capable of encoding the specified MIME type, or null if no match was found.
-    */
-   private static MediaCodecInfo selectCodec( String mimeType ) {
-      int numCodecs = MediaCodecList.getCodecCount();
-      for ( int i = 0; i < numCodecs; i++ ) {
-         MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt( i );
-         if ( !codecInfo.isEncoder() ) {
-            continue;
-         }
-         String[] types = codecInfo.getSupportedTypes();
-         for ( int j = 0; j < types.length; j++ ) {
-            if ( types[j].equalsIgnoreCase( mimeType ) ) {
-               return codecInfo;
-            }
-         }
-      }
-      return null;
-   }
-
-   /**
-    * Generates video frames, feeds them into the encoder, and writes the output to the VideoChunks instance.
-    */
-   private void generateVideoData( MediaCodec encoder, InputSurface inputSurface, VideoChunks output ) {
-      final int TIMEOUT_USEC = 10000;
-      ByteBuffer[] encoderOutputBuffers = encoder.getOutputBuffers();
-      MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-      int generateIndex = 0;
-      int outputCount = 0;
-      // Loop until the output side is done.
-      boolean inputDone = false;
-      boolean outputDone = false;
-      while ( !outputDone ) {
-         if ( VERBOSE )
-            Log.d( TAG, "gen loop" );
-         // If we're not done submitting frames, generate a new one and submit it. The
-         // eglSwapBuffers call will block if the input is full.
-         if ( !inputDone ) {
-            if ( generateIndex == NUM_FRAMES ) {
-               // Send an empty frame with the end-of-stream flag set.
-               if ( VERBOSE )
-                  Log.d( TAG, "signaling input EOS" );
-               if ( WORK_AROUND_BUGS ) {
-                  // Might drop a frame, but at least we won't crash mediaserver.
-                  try {
-                     Thread.sleep( 500 );
-                  } catch ( InterruptedException ie ) {
-                  }
-                  outputDone = true;
-               } else {
-                  encoder.signalEndOfInputStream();
-               }
-               inputDone = true;
-            } else {
-               generateSurfaceFrame( generateIndex );
-               inputSurface.setPresentationTime( computePresentationTime( generateIndex ) * 1000 );
-               if ( VERBOSE )
-                  Log.d( TAG, "inputSurface swapBuffers" );
-               inputSurface.swapBuffers();
-            }
-            generateIndex++;
-         }
-         // Check for output from the encoder. If there's no output yet, we either need to
-         // provide more input, or we need to wait for the encoder to work its magic. We
-         // can't actually tell which is the case, so if we can't get an output buffer right
-         // away we loop around and see if it wants more input.
-         //
-         // If we do find output, drain it all before supplying more input.
-         while ( true ) {
-            int encoderStatus = encoder.dequeueOutputBuffer( info, TIMEOUT_USEC );
-            if ( encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER ) {
-               // no output available yet
-               if ( VERBOSE )
-                  Log.d( TAG, "no output from encoder available" );
-               break; // out of while
-            } else if ( encoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED ) {
-               // not expected for an encoder
-               encoderOutputBuffers = encoder.getOutputBuffers();
-               if ( VERBOSE )
-                  Log.d( TAG, "encoder output buffers changed" );
-            } else if ( encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED ) {
-               // not expected for an encoder
-               MediaFormat newFormat = encoder.getOutputFormat();
-               if ( VERBOSE )
-                  Log.d( TAG, "encoder output format changed: " + newFormat );
-            } else if ( encoderStatus < 0 ) {
-               fail( "unexpected result from encoder.dequeueOutputBuffer: " + encoderStatus );
-            } else { // encoderStatus >= 0
-               ByteBuffer encodedData = encoderOutputBuffers[encoderStatus];
-               if ( encodedData == null ) {
-                  fail( "encoderOutputBuffer " + encoderStatus + " was null" );
-               }
-               // Codec config flag must be set iff this is the first chunk of output. This
-               // may not hold for all codecs, but it appears to be the case for video/avc.
-               assertTrue( ( info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG ) != 0 || outputCount != 0 );
-               if ( info.size != 0 ) {
-                  // Adjust the ByteBuffer values to match BufferInfo.
-                  encodedData.position( info.offset );
-                  encodedData.limit( info.offset + info.size );
-                  output.addChunk( encodedData, info.flags, info.presentationTimeUs );
-                  outputCount++;
-               }
-               encoder.releaseOutputBuffer( encoderStatus, false );
-               if ( ( info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM ) != 0 ) {
-                  outputDone = true;
-                  break; // out of while
-               }
-            }
-         }
-      }
-      // One chunk per frame, plus one for the config data.
-      assertEquals( "Frame count", NUM_FRAMES + 1, outputCount );
-   }
-
-   /**
-    * Generates a frame of data using GL commands.
-    * <p>
-    * We have an 8-frame animation sequence that wraps around. It looks like this:
-    * 
-    * <pre>
-    *   0 1 2 3
-    *   7 6 5 4
-    * </pre>
-    * 
-    * We draw one of the eight rectangles and leave the rest set to the zero-fill color.
-    */
-   private void generateSurfaceFrame( int frameIndex ) {
-      frameIndex %= 8;
-      int startX, startY;
-      if ( frameIndex < 4 ) {
-         // (0,0) is bottom-left in GL
-         startX = frameIndex * ( mWidth / 4 );
-         startY = mHeight / 2;
-      } else {
-         startX = ( 7 - frameIndex ) * ( mWidth / 4 );
-         startY = 0;
-      }
-      GLES20.glDisable( GLES20.GL_SCISSOR_TEST );
-      GLES20.glClearColor( TEST_R0 / 255.0f, TEST_G0 / 255.0f, TEST_B0 / 255.0f, 1.0f );
-      GLES20.glClear( GLES20.GL_COLOR_BUFFER_BIT );
-      GLES20.glEnable( GLES20.GL_SCISSOR_TEST );
-      GLES20.glScissor( startX, startY, mWidth / 4, mHeight / 2 );
-      GLES20.glClearColor( TEST_R1 / 255.0f, TEST_G1 / 255.0f, TEST_B1 / 255.0f, 1.0f );
-      GLES20.glClear( GLES20.GL_COLOR_BUFFER_BIT );
    }
 
    /**
@@ -374,24 +146,6 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
       InputSurface inputSurface = null;
       OutputSurface outputSurface = null;
       try {
-         MediaFormat inputFormat = inputData.getMediaFormat();
-         // Create an encoder format that matches the input format. (Might be able to just
-         // re-use the format used to generate the video, since we want it to be the same.)
-         MediaFormat outputFormat = MediaFormat.createVideoFormat( MIME_TYPE, mWidth, mHeight );
-         outputFormat.setInteger( MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface );
-         outputFormat.setInteger( MediaFormat.KEY_BIT_RATE, inputFormat.getInteger( MediaFormat.KEY_BIT_RATE ) );
-         outputFormat.setInteger( MediaFormat.KEY_FRAME_RATE, inputFormat.getInteger( MediaFormat.KEY_FRAME_RATE ) );
-         outputFormat.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, inputFormat.getInteger( MediaFormat.KEY_I_FRAME_INTERVAL ) );
-         outputData.setMediaFormat( outputFormat );
-         encoder = MediaCodec.createEncoderByType( MIME_TYPE );
-         encoder.configure( outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE );
-         inputSurface = new InputSurface( encoder.createInputSurface() );
-         inputSurface.makeCurrent();
-         encoder.start();
-         // OutputSurface uses the EGL context created by InputSurface.
-         decoder = MediaCodec.createDecoderByType( MIME_TYPE );
-         outputSurface = new OutputSurface();
-         // outputSurface.changeFragmentShader( FRAGMENT_SHADER );
 
          mExtractor = new MediaExtractor();
          try {
@@ -399,6 +153,10 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
          } catch ( IOException e ) {
             e.printStackTrace();
          }
+
+         MediaMetadataRetriever r = new MediaMetadataRetriever();
+         r.setDataSource( "/mnt/sdcard/test2.mp4" );
+         mVideoDuration = Integer.parseInt( r.extractMetadata( MediaMetadataRetriever.METADATA_KEY_DURATION ) );
 
          for ( int trackIndex = 0; trackIndex < mExtractor.getTrackCount(); trackIndex++ ) {
             mExtractFormat = mExtractor.getTrackFormat( trackIndex );
@@ -412,7 +170,28 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
                }
             }
          }
+
          mExtractFormat = mExtractor.getTrackFormat( mExtractIndex );
+
+         // MediaFormat inputFormat = inputData.getMediaFormat();
+         // Create an encoder format that matches the input format. (Might be able to just
+         // re-use the format used to generate the video, since we want it to be the same.)
+         MediaFormat outputFormat = MediaFormat.createVideoFormat( MIME_TYPE, mWidth, mHeight );
+         outputFormat.setInteger( MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface );
+         outputFormat.setInteger( MediaFormat.KEY_BIT_RATE, mBitRate );
+      
+         outputFormat.setInteger( MediaFormat.KEY_FRAME_RATE, FRAME_RATE );
+         outputFormat.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL );
+         outputData.setMediaFormat( outputFormat );
+         encoder = MediaCodec.createEncoderByType( MIME_TYPE );
+         encoder.configure( outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE );
+         inputSurface = new InputSurface( encoder.createInputSurface() );
+         inputSurface.makeCurrent();
+         encoder.start();
+         // OutputSurface uses the EGL context created by InputSurface.
+         decoder = MediaCodec.createDecoderByType( MIME_TYPE );
+         outputSurface = new OutputSurface();
+         // outputSurface.changeFragmentShader( FRAGMENT_SHADER );
 
          decoder.configure( mExtractFormat, outputSurface.getSurface(), null, 0 );
          decoder.start();
@@ -459,10 +238,8 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
 
    int mExtractIndex = 0;
 
-   // HERE
-   /**
-    * Edits a stream of video data.
-    */
+   int mVideoDuration = 0;
+
    private void editVideoData( VideoChunks inputData, MediaCodec decoder, OutputSurface outputSurface, InputSurface inputSurface, MediaCodec encoder, VideoChunks outputData ) {
       final int TIMEOUT_USEC = 10000;
       ByteBuffer[] decoderInputBuffers = decoder.getInputBuffers();
@@ -481,7 +258,7 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
          if ( !inputDone ) {
             int inputBufIndex = decoder.dequeueInputBuffer( TIMEOUT_USEC );
             if ( inputBufIndex >= 0 ) {
-               if ( inputChunk == inputData.getNumChunks() ) {
+               if ( mExtractor.getSampleTime() / 1000 >= mVideoDuration ) {
                   // End of stream -- send empty frame with EOS flag set.
                   decoder.queueInputBuffer( inputBufIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM );
                   inputDone = true;
@@ -551,11 +328,11 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
                if ( VERBOSE )
                   Log.d( TAG, "encoder output format changed: " + newFormat );
             } else if ( encoderStatus < 0 ) {
-               fail( "unexpected result from encoder.dequeueOutputBuffer: " + encoderStatus );
+               // fail( "unexpected result from encoder.dequeueOutputBuffer: " + encoderStatus );
             } else { // encoderStatus >= 0
                ByteBuffer encodedData = encoderOutputBuffers[encoderStatus];
                if ( encodedData == null ) {
-                  fail( "encoderOutputBuffer " + encoderStatus + " was null" );
+                  // fail( "encoderOutputBuffer " + encoderStatus + " was null" );
                }
                // Write the data to the output "file".
                if ( info.size != 0 ) {
@@ -596,7 +373,7 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
                   if ( VERBOSE )
                      Log.d( TAG, "decoder output format changed: " + newFormat );
                } else if ( decoderStatus < 0 ) {
-                  fail( "unexpected result from decoder.dequeueOutputBuffer: " + decoderStatus );
+                  // fail( "unexpected result from decoder.dequeueOutputBuffer: " + decoderStatus );
                } else { // decoderStatus >= 0
                   if ( VERBOSE )
                      Log.d( TAG, "surface decoder given buffer " + decoderStatus + " (size=" + info.size + ")" );
@@ -658,7 +435,7 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
          decoder.start();
          int badFrames = checkVideoData( inputData, decoder, surface );
          if ( badFrames != 0 ) {
-            fail( "Found " + badFrames + " bad frames" );
+            // fail( "Found " + badFrames + " bad frames" );
          }
       } finally {
          if ( surface != null ) {
@@ -734,7 +511,7 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
                if ( VERBOSE )
                   Log.d( TAG, "decoder output format changed: " + newFormat );
             } else if ( decoderStatus < 0 ) {
-               fail( "unexpected result from decoder.dequeueOutputBuffer: " + decoderStatus );
+               // fail( "unexpected result from decoder.dequeueOutputBuffer: " + decoderStatus );
             } else { // decoderStatus >= 0
                ByteBuffer decodedData = decoderOutputBuffers[decoderStatus];
                if ( VERBOSE )
@@ -753,7 +530,7 @@ public class DecodeEditEncodeTest extends AndroidTestCase {
                if ( doRender ) {
                   if ( VERBOSE )
                      Log.d( TAG, "awaiting frame " + checkIndex );
-                  assertEquals( "Wrong time stamp", computePresentationTime( checkIndex ), info.presentationTimeUs );
+                  // assertEquals( "Wrong time stamp", computePresentationTime( checkIndex ), info.presentationTimeUs );
                   surface.awaitNewImage();
                   surface.drawImage();
                   if ( !checkSurfaceFrame( checkIndex++ ) ) {
