@@ -94,15 +94,11 @@ public class VideoDownsampler {
       @Override
       public void run() {
          try {
-            videoEditTest();
+            resampleVideo();
          } catch ( Throwable th ) {
             mThrowable = th;
          }
       }
-   }
-
-   private void videoEditTest() {
-      editVideoFile();
    }
 
    /**
@@ -110,9 +106,9 @@ public class VideoDownsampler {
     * <p>
     * If we recognize the decoded format we can do this in Java code using the ByteBuffer[] output, but it's not practical to support all OEM formats. By using a SurfaceTexture for output and a Surface for input, we can avoid issues with obscure formats and can use a fragment shader to do transformations.
     */
-   private void editVideoFile() {
+   private void resampleVideo() {
       if ( VERBOSE )
-         Log.d( TAG, "editVideoFile " + mWidth + "x" + mHeight );
+         Log.d( TAG, "resampleVideo " + mWidth + "x" + mHeight );
       MediaCodec decoder = null;
       MediaCodec encoder = null;
       InputSurface inputSurface = null;
@@ -145,7 +141,6 @@ public class VideoDownsampler {
 
          mExtractFormat = mExtractor.getTrackFormat( mExtractIndex );
 
-         // MediaFormat inputFormat = inputData.getMediaFormat();
          // Create an encoder format that matches the input format. (Might be able to just
          // re-use the format used to generate the video, since we want it to be the same.)
          MediaFormat outputFormat = MediaFormat.createVideoFormat( MIME_TYPE, mWidth, mHeight );
@@ -162,11 +157,10 @@ public class VideoDownsampler {
          // OutputSurface uses the EGL context created by InputSurface.
          decoder = MediaCodec.createDecoderByType( MIME_TYPE );
          outputSurface = new OutputSurface();
-         // outputSurface.changeFragmentShader( FRAGMENT_SHADER );
 
          decoder.configure( mExtractFormat, outputSurface.getSurface(), null, 0 );
          decoder.start();
-         editVideoData( decoder, outputSurface, inputSurface, encoder );
+         resampleVideo( decoder, outputSurface, inputSurface, encoder );
       } finally {
          if ( VERBOSE )
             Log.d( TAG, "shutting down encoder, decoder" );
@@ -210,7 +204,7 @@ public class VideoDownsampler {
 
    int mVideoDuration = 0;
 
-   private void editVideoData( MediaCodec decoder, OutputSurface outputSurface, InputSurface inputSurface, MediaCodec encoder ) {
+   private void resampleVideo( MediaCodec decoder, OutputSurface outputSurface, InputSurface inputSurface, MediaCodec encoder ) {
       final int TIMEOUT_USEC = 10000;
       ByteBuffer[] decoderInputBuffers = decoder.getInputBuffers();
       ByteBuffer[] encoderOutputBuffers = encoder.getOutputBuffers();
@@ -244,17 +238,11 @@ public class VideoDownsampler {
                   if ( sampleSize < 0 ) {
                      Log.d( TAG, "InputBuffer BUFFER_FLAG_END_OF_STREAM" );
                      decoder.queueInputBuffer( inputBufIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM );
-                     // isEOS = true;
                   } else {
                      Log.d( TAG, "InputBuffer ADVANCING" );
                      decoder.queueInputBuffer( inputBufIndex, 0, sampleSize, mExtractor.getSampleTime(), 0 );
                      mExtractor.advance();
                   }
-
-                  /*decoder.queueInputBuffer( inputBufIndex, 0, inputBuf.position(), time, flags );
-                  if ( VERBOSE ) {
-                     Log.d( TAG, "submitted frame " + inputChunk + " to dec, size=" + inputBuf.position() + " flags=" + flags );
-                  }*/
 
                   inputChunk++;
                }
@@ -288,7 +276,7 @@ public class VideoDownsampler {
                }
 
                MediaFormat newFormat = encoder.getOutputFormat();
-               // now that we have the Magic Goodies, start the muxer
+
                mTrackIndex = mMuxer.addTrack( newFormat );
                mMuxer.start();
                mMuxerStarted = true;
@@ -384,10 +372,4 @@ public class VideoDownsampler {
       }
    }
 
-   /**
-    * Generates the presentation time for frame N, in microseconds.
-    */
-   private static long computePresentationTime( int frameIndex ) {
-      return 123 + frameIndex * 1000000 / FRAME_RATE;
-   }
 }
