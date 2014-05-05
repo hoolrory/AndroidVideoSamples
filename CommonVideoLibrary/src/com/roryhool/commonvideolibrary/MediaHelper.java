@@ -46,6 +46,10 @@ public class MediaHelper {
       return retriever.getFrameAtTime( timeMs * 1000 );
    }
 
+   public static int GetDuration( Uri uri ) {
+      return GetMediaMetadataRetrieverPropertyInteger( uri, MediaMetadataRetriever.METADATA_KEY_DURATION, 0 );
+   }
+
    public static int GetWidth( Uri uri ) {
       return GetMediaMetadataRetrieverPropertyInteger( uri, MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH, 0 );
    }

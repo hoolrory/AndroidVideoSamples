@@ -2,6 +2,57 @@
 <LinearLayout 
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+        
+    <ImageView
+        android:id="@+id/selected_video_thumbnail"
+        android:layout_width="wrap_content"
+        android:layout_height="100dip"
+        android:contentDescription="@string/selected_video_thumbnail" />
+    
+    <TextView
+        android:id="@+id/selected_video_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    
+    <TextView
+        android:id="@+id/selected_video_duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    
+    <TextView
+        android:id="@+id/trim_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    
+    <SeekBar
+        android:id="@+id/trim_start_seek_bar"
+        android:layout_width="match_parent"
+        android:layout_height="48dip"
+        android:minHeight="48dip"
+        android:maxHeight="48dip"
+        android:layout_marginRight="4dip"
+        android:layout_marginLeft="4dip" />
+    
+    <TextView
+        android:id="@+id/trim_end"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+ 
+    <SeekBar
+        android:id="@+id/trim_end_seek_bar"
+        android:layout_width="match_parent"
+        android:layout_height="48dip"
+        android:minHeight="48dip"
+        android:maxHeight="48dip"
+        android:layout_marginRight="4dip"
+        android:layout_marginLeft="4dip" />
+    
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="48dip"
+        android:text="Trim"
+        android:onClick="onTrimClicked" />
 
 </LinearLayout>

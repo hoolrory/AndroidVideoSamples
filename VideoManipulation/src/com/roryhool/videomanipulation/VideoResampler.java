@@ -81,6 +81,10 @@ public class VideoResampler {
 
    int mVideoDuration = 0;
 
+   int mStartTime = 0;
+
+   int mEndTime = 0;
+
    public VideoResampler() {
 
    }
@@ -111,6 +115,14 @@ public class VideoResampler {
 
    public void setOutputIFrameInterval( int IFrameInterval ) {
       mIFrameInterval = IFrameInterval;
+   }
+
+   public void setStartTime( int startTime ) {
+      mStartTime = startTime;
+   }
+
+   public void setEndTime( int endTime ) {
+      mEndTime = endTime;
    }
 
    public void start() throws Throwable {
