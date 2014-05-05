@@ -18,6 +18,8 @@ package com.roryhool.videomanipulation;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 import android.annotation.TargetApi;
@@ -33,10 +35,13 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.roryhool.commonvideolibrary.MediaHelper;
+import com.roryhool.commonvideolibrary.Resolution;
 
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
 public class ResampleActivity extends Activity {
@@ -57,8 +62,8 @@ public class ResampleActivity extends Activity {
    BufferInfo mDecoderBufferInfo;
    BufferInfo mEncoderBufferInfo;
 
-   int mEncoderWidth = 640;
-   int mEncoderHeight = 480;
+   int mInputWidth;
+   int mInputHeight;
 
    int mBitRate = 2000000;
 
@@ -73,6 +78,19 @@ public class ResampleActivity extends Activity {
    TextView mVideoFrameRate;
 
    TextView mVideoIFrameInterval;
+   
+   Spinner mResolutionSpinner;
+   Spinner mBitRateSpinner;
+   Spinner mFrameRateSpinner;
+   Spinner mIFrameIntervalSpinner;
+
+   List<String> mResolutions = Arrays.asList( "1080P", "720P", "480P", "360P", "QVGA", "QCIF" );
+   
+   List<String> mBitRates = Arrays.asList( "2Mbps", "1Mbps", "500Kbps", "56Kbps" );
+
+   List<String> mFrameRates = Arrays.asList( "30fps", "15fps" );
+
+   List<String> mIFrameIntervals = Arrays.asList( "1", "5", "10" );
 
    @Override
    public void onCreate( Bundle savedInstanceState ) {
@@ -92,6 +110,11 @@ public class ResampleActivity extends Activity {
 
       mVideoIFrameInterval = (TextView) findViewById( R.id.selected_video_iframeinterval );
 
+      mResolutionSpinner = (Spinner) findViewById( R.id.resolutionSpinner );
+      mBitRateSpinner = (Spinner) findViewById( R.id.bitRateSpinner );
+      mFrameRateSpinner = (Spinner) findViewById( R.id.frameRateSpinner );
+      mIFrameIntervalSpinner = (Spinner) findViewById( R.id.IFrameIntervalSpinner );
+
       Uri data = getIntent().getData();
 
       if ( data != null ) {
@@ -106,6 +129,19 @@ public class ResampleActivity extends Activity {
 
       mOutputUri = Uri.parse( resampledFileName );
 
+      setupSpinner( mResolutionSpinner, mResolutions );
+
+      setupSpinner( mBitRateSpinner, mBitRates );
+
+      setupSpinner( mFrameRateSpinner, mFrameRates );
+
+      setupSpinner( mIFrameIntervalSpinner, mIFrameIntervals );
+   }
+
+   private void setupSpinner( Spinner spinner, List<String> items ) {
+      ArrayAdapter<String> adapter = new ArrayAdapter<String>( this, android.R.layout.simple_spinner_item, items );
+      adapter.setDropDownViewResource( android.R.layout.simple_spinner_dropdown_item );
+      spinner.setAdapter( adapter );
    }
 
    public void loadVideoUri( Uri uri ) {
@@ -117,12 +153,12 @@ public class ResampleActivity extends Activity {
 
       mVideoName.setText( file.getName() );
       
-      int videoWidth = MediaHelper.GetWidth( uri );
-      int videoHeight = MediaHelper.GetHeight( uri );
-      mVideoResolution.setText( String.format( Locale.US, "Resolution: %dx%d", videoWidth, videoHeight ) );
+      mInputWidth = MediaHelper.GetWidth( uri );
+      mInputHeight = MediaHelper.GetHeight( uri );
+
+      mVideoResolution.setText( String.format( Locale.US, "Resolution: %dx%d", mInputWidth, mInputHeight ) );
 
       mVideoBitRate.setText( String.format( Locale.US, "BitRate: %d", MediaHelper.GetBitRate( uri ) ) );
-
 
       mVideoFrameRate.setText( String.format( Locale.US, "FrameRate: %d", MediaHelper.GetFrameRate( uri ) ) );
 
@@ -130,7 +166,63 @@ public class ResampleActivity extends Activity {
 
    }
 
+   Resolution mOutputResolution;
+   int mOutputBitRate;
+   int mOutputFrameRate;
+   int mOutputIFrameInterval;
+
    public void onResampleClicked( View view ) {
+
+      String selectedRes = (String) mResolutionSpinner.getSelectedItem();
+
+      if ( selectedRes.equals( "1080p" ) ) {
+         mOutputResolution = Resolution.RESOLUTION_1080P;
+      } else if ( selectedRes.equals( "720p" ) ) {
+         mOutputResolution = Resolution.RESOLUTION_720P;
+      } else if ( selectedRes.equals( "480p" ) ) {
+         mOutputResolution = Resolution.RESOLUTION_480P;
+      } else if ( selectedRes.equals( "360p" ) ) {
+         mOutputResolution = Resolution.RESOLUTION_360P;
+      } else if ( selectedRes.equals( "QVGA" ) ) {
+         mOutputResolution = Resolution.RESOLUTION_QVGA;
+      } else if ( selectedRes.equals( "QCIF" ) ) {
+         mOutputResolution = Resolution.RESOLUTION_QCIF;
+      }
+
+      if ( mInputHeight > mInputWidth ) {
+         mOutputResolution = mOutputResolution.rotate();
+      }
+
+      String selectedBitRate = (String) mBitRateSpinner.getSelectedItem();
+
+      if ( selectedBitRate.equals( "2Mbps" ) ) {
+         mOutputBitRate = 2097152;
+      } else if ( selectedBitRate.equals( "1Mbps" ) ) {
+         mOutputBitRate = 1048576;
+      } else if ( selectedBitRate.equals( "500Kbps" ) ) {
+         mOutputBitRate = 512000;
+      } else if ( selectedBitRate.equals( "56Kbps" ) ) {
+         mOutputBitRate = 57344;
+      }
+
+      String selectedFrameRate = (String) mFrameRateSpinner.getSelectedItem();
+
+      if ( selectedFrameRate.equals( "30fps" ) ) {
+         mOutputFrameRate = 30;
+      } else if ( selectedFrameRate.equals( "15fps" ) ) {
+         mOutputFrameRate = 15;
+      }
+
+      String selectedIFrameInterval = (String) mIFrameIntervalSpinner.getSelectedItem();
+
+      if ( selectedIFrameInterval.equals( "1" ) ) {
+         mOutputIFrameInterval = 1;
+      } else if ( selectedIFrameInterval.equals( "5" ) ) {
+         mOutputIFrameInterval = 5;
+      } else if ( selectedIFrameInterval.equals( "10" ) ) {
+         mOutputIFrameInterval = 10;
+      }
+
       new ResampleTask().execute( mInputUri, mOutputUri );
    }
 
@@ -149,8 +241,11 @@ public class ResampleActivity extends Activity {
          VideoResampler resampler = new VideoResampler();
          resampler.setInput( inputUri );
          resampler.setOutput( outputUri );
-         resampler.setOutputResolution( VideoResampler.WIDTH_720P, VideoResampler.HEIGHT_720P );
-         resampler.setOutputBitRate( VideoResampler.BITRATE_720P );
+
+         resampler.setOutputResolution( mOutputResolution.getWidth(), mOutputResolution.getHeight() );
+         resampler.setOutputBitRate( mOutputBitRate );
+         resampler.setOutputFrameRate( mOutputFrameRate );
+         resampler.setOutputIFrameInterval( mOutputIFrameInterval );
 
          try {
             resampler.start();

@@ -37,6 +37,33 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2px"
+        android:background="@color/black"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp" />
+ 
+    <Spinner
+        android:id="@+id/resolutionSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+ 
+    <Spinner
+        android:id="@+id/bitRateSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+ 
+    <Spinner
+        android:id="@+id/frameRateSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+ 
+    <Spinner
+        android:id="@+id/IFrameIntervalSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    
     <Button
         android:layout_width="wrap_content"
         android:layout_height="48dip"
