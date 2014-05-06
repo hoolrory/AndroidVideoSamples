@@ -81,9 +81,9 @@ public class VideoResampler {
 
    int mVideoDuration = 0;
 
-   int mStartTime = 0;
+   int mStartTime = -1;
 
-   int mEndTime = 0;
+   int mEndTime = -1;
 
    public VideoResampler() {
 
@@ -185,6 +185,10 @@ public class VideoResampler {
             }
          }
 
+         if ( mStartTime != -1 ) {
+            mExtractor.seekTo( mStartTime * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC );
+         }
+
          mExtractFormat = mExtractor.getTrackFormat( mExtractIndex );
 
          MediaFormat outputFormat = MediaFormat.createVideoFormat( MediaHelper.MIME_TYPE_AVC, mWidth, mHeight );
@@ -245,6 +249,10 @@ public class VideoResampler {
       int inputChunk = 0;
       int outputCount = 0;
 
+      if ( mEndTime == -1 ) {
+         mEndTime = mVideoDuration;
+      }
+
       boolean outputDone = false;
       boolean inputDone = false;
       boolean decoderDone = false;
@@ -255,7 +263,7 @@ public class VideoResampler {
          if ( !inputDone ) {
             int inputBufIndex = decoder.dequeueInputBuffer( TIMEOUT_USEC );
             if ( inputBufIndex >= 0 ) {
-               if ( mExtractor.getSampleTime() / 1000 >= mVideoDuration ) {
+               if ( mExtractor.getSampleTime() / 1000 >= mEndTime ) {
                   // End of stream -- send empty frame with EOS flag set.
                   decoder.queueInputBuffer( inputBufIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM );
                   inputDone = true;
