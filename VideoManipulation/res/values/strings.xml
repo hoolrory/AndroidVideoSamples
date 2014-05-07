@@ -6,6 +6,9 @@
     <string name="join_videos">Join Videos</string>
     <string name="trim_video">Trim Video</string>
     <string name="resample_video">Resample Video</string>
+
+    <string name="select_video_1">Select Video 1</string>
+    <string name="select_video_2">Select Video 2</string>
     
 
 </resources>

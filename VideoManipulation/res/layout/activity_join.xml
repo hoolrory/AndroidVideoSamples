@@ -1,7 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout 
+<RelativeLayout 
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
+    
+    <View 
+        android:id="@+id/center_divider"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_centerHorizontal="true" />
 
-</LinearLayout>
+    <LinearLayout
+       android:id="@+id/video_1_layout"
+	    android:layout_width="match_parent"
+	    android:layout_height="wrap_content"
+	    android:orientation="vertical"
+	    android:layout_toLeftOf="@+id/center_divider"
+	    android:layout_alignParentLeft="true">
+       
+	    <Button
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:text="@string/select_video_1"
+	        android:onClick="onSelectClicked1" />
+        
+       <ImageView
+           android:id="@+id/selected_video_1_thumbnail"
+           android:layout_width="wrap_content"
+           android:layout_height="200dip"
+           android:contentDescription="@string/selected_video_thumbnail"
+           android:layout_gravity="center_horizontal" />
+       
+       <TextView
+           android:id="@+id/selected_video_1_name"
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:layout_marginBottom="10dip" />
+	    
+   </LinearLayout>
+
+    <LinearLayout
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:orientation="vertical"
+       android:layout_toRightOf="@+id/center_divider"
+       android:layout_alignParentRight="true">
+       
+       <Button
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:text="@string/select_video_2"
+           android:onClick="onSelectClicked2" />
+        
+       <ImageView
+           android:id="@+id/selected_video_2_thumbnail"
+           android:layout_width="wrap_content"
+           android:layout_height="200dip"
+           android:contentDescription="@string/selected_video_thumbnail"
+           android:layout_gravity="center_horizontal" />
+       
+       <TextView
+           android:id="@+id/selected_video_2_name"
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:layout_marginBottom="10dip" />
+       
+   </LinearLayout>
+    
+    <Button
+        android:id="@+id/join_button"
+        android:layout_width="wrap_content"
+        android:layout_height="48dip"
+        android:text="Join"
+        android:onClick="onJoinClicked"
+        android:layout_below="@+id/video_1_layout"
+        android:enabled="false" />
+   
+</RelativeLayout>
