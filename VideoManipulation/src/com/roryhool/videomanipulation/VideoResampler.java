@@ -17,6 +17,8 @@ package com.roryhool.videomanipulation;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.annotation.TargetApi;
 import android.media.MediaCodec;
@@ -66,7 +68,7 @@ public class VideoResampler {
 
    private int mIFrameInterval = IFRAME_INTERVAL_10;
 
-   private Uri mInputUri;
+   // private Uri mInputUri;
    private Uri mOutputUri;
 
    MediaMuxer mMuxer = null;
@@ -81,16 +83,23 @@ public class VideoResampler {
 
    int mVideoDuration = 0;
 
-   int mStartTime = -1;
+   List<SamplerClip> mClips = new ArrayList<SamplerClip>();
 
-   int mEndTime = -1;
+   SamplerClip mClip;
+   // int mStartTime = -1;
+
+   // int mEndTime = -1;
 
    public VideoResampler() {
 
    }
 
-   public void setInput( Uri intputUri ) {
-      mInputUri = intputUri;
+   /*
+    * public void setInput( Uri intputUri ) { mInputUri = intputUri; }
+    */
+
+   public void addSamplerClip( SamplerClip clip ) {
+      mClips.add( clip );
    }
 
    public void setOutput( Uri outputUri ) {
@@ -117,14 +126,11 @@ public class VideoResampler {
       mIFrameInterval = IFrameInterval;
    }
 
-   public void setStartTime( int startTime ) {
-      mStartTime = startTime;
-   }
-
-   public void setEndTime( int endTime ) {
-      mEndTime = endTime;
-   }
-
+   /*
+    * public void setStartTime( int startTime ) { mStartTime = startTime; }
+    * 
+    * public void setEndTime( int endTime ) { mEndTime = endTime; }
+    */
    public void start() throws Throwable {
       VideoEditWrapper wrapper = new VideoEditWrapper();
       Thread th = new Thread( wrapper, "codec test" );
@@ -153,8 +159,12 @@ public class VideoResampler {
    }
    
    private void resampleVideo() {
+
+      mClip = mClips.get( 0 );
+
       if ( VERBOSE )
          Log.d( TAG, "resampleVideo " + mWidth + "x" + mHeight );
+
       MediaCodec decoder = null;
       MediaCodec encoder = null;
       InputSurface inputSurface = null;
@@ -163,13 +173,13 @@ public class VideoResampler {
 
          mExtractor = new MediaExtractor();
          try {
-            mExtractor.setDataSource( mInputUri.toString() );
+            mExtractor.setDataSource( mClip.getUri().toString() );
          } catch ( IOException e ) {
             e.printStackTrace();
          }
 
          MediaMetadataRetriever r = new MediaMetadataRetriever();
-         r.setDataSource( mInputUri.toString() );
+         r.setDataSource( mClip.getUri().toString() );
          mVideoDuration = Integer.parseInt( r.extractMetadata( MediaMetadataRetriever.METADATA_KEY_DURATION ) );
 
          for ( int trackIndex = 0; trackIndex < mExtractor.getTrackCount(); trackIndex++ ) {
@@ -185,8 +195,8 @@ public class VideoResampler {
             }
          }
 
-         if ( mStartTime != -1 ) {
-            mExtractor.seekTo( mStartTime * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC );
+         if ( mClip.getStartTime() != -1 ) {
+            mExtractor.seekTo( mClip.getStartTime() * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC );
          }
 
          mExtractFormat = mExtractor.getTrackFormat( mExtractIndex );
@@ -248,9 +258,11 @@ public class VideoResampler {
       MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
       int inputChunk = 0;
       int outputCount = 0;
+      
+      int endTime = mClip.getEndTime();
 
-      if ( mEndTime == -1 ) {
-         mEndTime = mVideoDuration;
+      if ( endTime == -1 ) {
+         endTime = mVideoDuration;
       }
 
       boolean outputDone = false;
@@ -263,7 +275,7 @@ public class VideoResampler {
          if ( !inputDone ) {
             int inputBufIndex = decoder.dequeueInputBuffer( TIMEOUT_USEC );
             if ( inputBufIndex >= 0 ) {
-               if ( mExtractor.getSampleTime() / 1000 >= mEndTime ) {
+               if ( mExtractor.getSampleTime() / 1000 >= endTime ) {
                   // End of stream -- send empty frame with EOS flag set.
                   decoder.queueInputBuffer( inputBufIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM );
                   inputDone = true;
@@ -388,7 +400,13 @@ public class VideoResampler {
                      outputSurface.awaitNewImage();
                      outputSurface.drawImage();
                      // Send it to the encoder.
-                     inputSurface.setPresentationTime( info.presentationTimeUs * 1000 );
+                     long nSecs = info.presentationTimeUs * 100;
+                     if ( mClip.getStartTime() != -1 ) {
+                        nSecs = ( info.presentationTimeUs - ( mClip.getStartTime() * 1000 ) ) * 1000;
+                     }
+                     
+                     nSecs = Math.max( 0, nSecs );
+                     inputSurface.setPresentationTime( nSecs );
                      if ( VERBOSE )
                         Log.d( TAG, "swapBuffers" );
                      inputSurface.swapBuffers();

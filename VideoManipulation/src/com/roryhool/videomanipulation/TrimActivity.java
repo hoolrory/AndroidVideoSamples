@@ -199,11 +199,16 @@ public class TrimActivity extends Activity {
          Uri outputUri = uris[1];
 
          VideoResampler resampler = new VideoResampler();
-         resampler.setInput( inputUri );
+         SamplerClip clip = new SamplerClip( inputUri );
+         clip.setStartTime( mTrimStart );
+         clip.setEndTime( mTrimEnd );
+         resampler.addSamplerClip( clip );
+
+         // resampler.setInput( inputUri );
          resampler.setOutput( outputUri );
 
-         resampler.setStartTime( mTrimStart );
-         resampler.setEndTime( mTrimEnd );
+         // resampler.setStartTime( mTrimStart );
+         // resampler.setEndTime( mTrimEnd );
 
          try {
             resampler.start();

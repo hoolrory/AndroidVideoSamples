@@ -239,7 +239,8 @@ public class ResampleActivity extends Activity {
          Uri outputUri = uris[1];
 
          VideoResampler resampler = new VideoResampler();
-         resampler.setInput( inputUri );
+         resampler.addSamplerClip( new SamplerClip( inputUri ) );
+         // resampler.setInput( inputUri );
          resampler.setOutput( outputUri );
 
          resampler.setOutputResolution( mOutputResolution.getWidth(), mOutputResolution.getHeight() );
