@@ -175,13 +175,13 @@ public class ResampleActivity extends Activity {
 
       String selectedRes = (String) mResolutionSpinner.getSelectedItem();
 
-      if ( selectedRes.equals( "1080p" ) ) {
+      if ( selectedRes.equals( "1080P" ) ) {
          mOutputResolution = Resolution.RESOLUTION_1080P;
-      } else if ( selectedRes.equals( "720p" ) ) {
+      } else if ( selectedRes.equals( "720P" ) ) {
          mOutputResolution = Resolution.RESOLUTION_720P;
-      } else if ( selectedRes.equals( "480p" ) ) {
+      } else if ( selectedRes.equals( "480P" ) ) {
          mOutputResolution = Resolution.RESOLUTION_480P;
-      } else if ( selectedRes.equals( "360p" ) ) {
+      } else if ( selectedRes.equals( "360P" ) ) {
          mOutputResolution = Resolution.RESOLUTION_360P;
       } else if ( selectedRes.equals( "QVGA" ) ) {
          mOutputResolution = Resolution.RESOLUTION_QVGA;
