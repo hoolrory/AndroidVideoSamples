@@ -2,6 +2,8 @@ package com.roryhool.videomanipulation;
 
 import android.net.Uri;
 
+import com.roryhool.commonvideolibrary.MediaHelper;
+
 public class SamplerClip {
 
    Uri mUri;
@@ -9,8 +11,12 @@ public class SamplerClip {
    long mStartTime = -1;
    long mEndTime = -1;
 
+   int mVideoDuration;
+
    public SamplerClip( Uri uri ) {
       mUri = uri;
+
+      mVideoDuration = MediaHelper.GetDuration( uri );
    }
 
    public void setStartTime( long startTime ) {
@@ -31,5 +37,9 @@ public class SamplerClip {
 
    public long getEndTime() {
       return mEndTime;
+   }
+
+   public int getVideoDuration() {
+      return mVideoDuration;
    }
 }
