@@ -25,7 +25,6 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
-import android.media.MediaMetadataRetriever;
 import android.media.MediaMuxer;
 import android.net.Uri;
 import android.os.Build;
@@ -35,6 +34,8 @@ import com.roryhool.commonvideolibrary.MediaHelper;
 
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
 public class VideoResampler {
+   
+   private static final int TIMEOUT_USEC = 10000;
 
    public static final int WIDTH_QCIF = 176;
    public static final int HEIGHT_QCIF = 144;
@@ -71,21 +72,24 @@ public class VideoResampler {
    // private Uri mInputUri;
    private Uri mOutputUri;
 
+   InputSurface mInputSurface;
+
+   OutputSurface mOutputSurface;
+
+   MediaCodec mEncoder = null;
+
    MediaMuxer mMuxer = null;
    int mTrackIndex = -1;
    boolean mMuxerStarted = false;
 
-   MediaExtractor mExtractor = null;
+   // MediaExtractor mExtractor = null;
 
-   MediaFormat mExtractFormat = null;
+   // MediaFormat mExtractFormat = null;
 
-   int mExtractIndex = 0;
-
-   int mVideoDuration = 0;
+   // int mExtractIndex = 0;
 
    List<SamplerClip> mClips = new ArrayList<SamplerClip>();
 
-   SamplerClip mClip;
    // int mStartTime = -1;
 
    // int mEndTime = -1;
@@ -157,119 +161,155 @@ public class VideoResampler {
          }
       }
    }
+
+   private void setupEncoder() {
+
+      MediaFormat outputFormat = MediaFormat.createVideoFormat( MediaHelper.MIME_TYPE_AVC, mWidth, mHeight );
+      outputFormat.setInteger( MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface );
+      outputFormat.setInteger( MediaFormat.KEY_BIT_RATE, mBitRate );
+
+      outputFormat.setInteger( MediaFormat.KEY_FRAME_RATE, mFrameRate );
+      outputFormat.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, mIFrameInterval );
+
+      mEncoder = MediaCodec.createEncoderByType( MediaHelper.MIME_TYPE_AVC );
+      mEncoder.configure( outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE );
+      mInputSurface = new InputSurface( mEncoder.createInputSurface() );
+      mInputSurface.makeCurrent();
+      mEncoder.start();
+   }
+
+   private void setupMuxer() {
+
+      try {
+         mMuxer = new MediaMuxer( mOutputUri.toString(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4 );
+      } catch ( IOException ioe ) {
+         throw new RuntimeException( "MediaMuxer creation failed", ioe );
+      }
+   }
    
    private void resampleVideo() {
 
-      mClip = mClips.get( 0 );
+      setupEncoder();
+      setupMuxer();
 
-      if ( VERBOSE )
-         Log.d( TAG, "resampleVideo " + mWidth + "x" + mHeight );
+      for ( SamplerClip clip : mClips ) {
+         feedClipToEncoder( clip );
+      }
+
+      releaseOutputResources();
+   }
+
+   private void feedClipToEncoder( SamplerClip clip ) {
 
       MediaCodec decoder = null;
-      MediaCodec encoder = null;
-      InputSurface inputSurface = null;
-      OutputSurface outputSurface = null;
-      try {
 
-         mExtractor = new MediaExtractor();
-         try {
-            mExtractor.setDataSource( mClip.getUri().toString() );
-         } catch ( IOException e ) {
-            e.printStackTrace();
-         }
-
-         MediaMetadataRetriever r = new MediaMetadataRetriever();
-         r.setDataSource( mClip.getUri().toString() );
-         mVideoDuration = Integer.parseInt( r.extractMetadata( MediaMetadataRetriever.METADATA_KEY_DURATION ) );
-
-         for ( int trackIndex = 0; trackIndex < mExtractor.getTrackCount(); trackIndex++ ) {
-            mExtractFormat = mExtractor.getTrackFormat( trackIndex );
-
-            String mime = mExtractFormat.getString( MediaFormat.KEY_MIME );
-            if ( mime != null ) {
-               if ( mime.equals( "video/avc" ) ) {
-                  mExtractor.selectTrack( trackIndex );
-                  mExtractIndex = trackIndex;
-                  break;
-               }
-            }
-         }
-
-         if ( mClip.getStartTime() != -1 ) {
-            mExtractor.seekTo( mClip.getStartTime() * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC );
-
-            mClip.setStartTime( mExtractor.getSampleTime() / 1000 );
-         }
-
-         mExtractFormat = mExtractor.getTrackFormat( mExtractIndex );
-
-         MediaFormat outputFormat = MediaFormat.createVideoFormat( MediaHelper.MIME_TYPE_AVC, mWidth, mHeight );
-         outputFormat.setInteger( MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface );
-         outputFormat.setInteger( MediaFormat.KEY_BIT_RATE, mBitRate );
+      MediaExtractor extractor = setupExtractorForClip(clip);
       
-         outputFormat.setInteger( MediaFormat.KEY_FRAME_RATE, mFrameRate );
-         outputFormat.setInteger( MediaFormat.KEY_I_FRAME_INTERVAL, mIFrameInterval );
+      if(extractor == null ) {
+         return;
+      }
+      
+      int trackIndex = getVideoTrackIndex(extractor);
+      extractor.selectTrack( trackIndex );
 
-         encoder = MediaCodec.createEncoderByType( MediaHelper.MIME_TYPE_AVC );
-         encoder.configure( outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE );
-         inputSurface = new InputSurface( encoder.createInputSurface() );
-         inputSurface.makeCurrent();
-         encoder.start();
+      MediaFormat clipFormat = extractor.getTrackFormat( trackIndex );
 
+      if ( clip.getStartTime() != -1 ) {
+         extractor.seekTo( clip.getStartTime() * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC );
+         clip.setStartTime( extractor.getSampleTime() / 1000 );
+      }
+      
+      try {
          decoder = MediaCodec.createDecoderByType( MediaHelper.MIME_TYPE_AVC );
-         outputSurface = new OutputSurface();
+         mOutputSurface = new OutputSurface();
 
-         decoder.configure( mExtractFormat, outputSurface.getSurface(), null, 0 );
+         decoder.configure( clipFormat, mOutputSurface.getSurface(), null, 0 );
          decoder.start();
-         resampleVideo( decoder, outputSurface, inputSurface, encoder );
+
+         resampleVideo( extractor, decoder, clip );
+
       } finally {
-         if ( VERBOSE )
-            Log.d( TAG, "shutting down encoder, decoder" );
-         if ( outputSurface != null ) {
-            outputSurface.release();
-         }
-         if ( inputSurface != null ) {
-            inputSurface.release();
-         }
-         if ( encoder != null ) {
-            encoder.stop();
-            encoder.release();
+
+         if ( mOutputSurface != null ) {
+            mOutputSurface.release();
          }
          if ( decoder != null ) {
             decoder.stop();
             decoder.release();
          }
 
-         if ( mExtractor != null ) {
-            mExtractor.release();
-            mExtractor = null;
-         }
-
-         if ( mMuxer != null ) {
-            mMuxer.stop();
-            mMuxer.release();
-            mMuxer = null;
+         if ( extractor != null ) {
+            extractor.release();
+            extractor = null;
          }
       }
    }
+   
+   private MediaExtractor setupExtractorForClip(SamplerClip clip ) {
 
-   private void resampleVideo( MediaCodec decoder, OutputSurface outputSurface, InputSurface inputSurface, MediaCodec encoder ) {
-      final int TIMEOUT_USEC = 10000;
+      
+      MediaExtractor extractor = new MediaExtractor();
+      try {
+         extractor.setDataSource( clip.getUri().toString() );
+      } catch ( IOException e ) {
+         e.printStackTrace();
+         return null;
+      }
+
+      return extractor;
+   }
+   
+   private int getVideoTrackIndex(MediaExtractor extractor) {
+
+      for ( int trackIndex = 0; trackIndex < extractor.getTrackCount(); trackIndex++ ) {
+         MediaFormat format = extractor.getTrackFormat( trackIndex );
+
+         String mime = format.getString( MediaFormat.KEY_MIME );
+         if ( mime != null ) {
+            if ( mime.equals( "video/avc" ) ) {
+               return trackIndex;
+            }
+         }
+      }
+
+      return -1;
+   }
+
+   private void releaseOutputResources() {
+
+      if ( mInputSurface != null ) {
+         mInputSurface.release();
+      }
+
+      if ( mEncoder != null ) {
+         mEncoder.stop();
+         mEncoder.release();
+      }
+
+      if ( mMuxer != null ) {
+         mMuxer.stop();
+         mMuxer.release();
+         mMuxer = null;
+      }
+   }
+
+   private void resampleVideo( MediaExtractor extractor, MediaCodec decoder, SamplerClip clip ) {
       ByteBuffer[] decoderInputBuffers = decoder.getInputBuffers();
-      ByteBuffer[] encoderOutputBuffers = encoder.getOutputBuffers();
+      ByteBuffer[] encoderOutputBuffers = mEncoder.getOutputBuffers();
       MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
       int inputChunk = 0;
       int outputCount = 0;
       
-      long endTime = mClip.getEndTime();
+      long endTime = clip.getEndTime();
 
       if ( endTime == -1 ) {
-         endTime = mVideoDuration;
+         endTime = clip.getVideoDuration();
       }
 
       boolean outputDone = false;
       boolean inputDone = false;
       boolean decoderDone = false;
+      
       while ( !outputDone ) {
          if ( VERBOSE )
             Log.d( TAG, "edit loop" );
@@ -277,7 +317,7 @@ public class VideoResampler {
          if ( !inputDone ) {
             int inputBufIndex = decoder.dequeueInputBuffer( TIMEOUT_USEC );
             if ( inputBufIndex >= 0 ) {
-               if ( mExtractor.getSampleTime() / 1000 >= endTime ) {
+               if ( extractor.getSampleTime() / 1000 >= endTime ) {
                   // End of stream -- send empty frame with EOS flag set.
                   decoder.queueInputBuffer( inputBufIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM );
                   inputDone = true;
@@ -289,14 +329,14 @@ public class VideoResampler {
                   ByteBuffer inputBuf = decoderInputBuffers[inputBufIndex];
                   inputBuf.clear();
 
-                  int sampleSize = mExtractor.readSampleData( inputBuf, 0 );
+                  int sampleSize = extractor.readSampleData( inputBuf, 0 );
                   if ( sampleSize < 0 ) {
                      Log.d( TAG, "InputBuffer BUFFER_FLAG_END_OF_STREAM" );
                      decoder.queueInputBuffer( inputBufIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM );
                   } else {
                      Log.d( TAG, "InputBuffer ADVANCING" );
-                     decoder.queueInputBuffer( inputBufIndex, 0, sampleSize, mExtractor.getSampleTime(), 0 );
-                     mExtractor.advance();
+                     decoder.queueInputBuffer( inputBufIndex, 0, sampleSize, extractor.getSampleTime(), 0 );
+                     extractor.advance();
                   }
 
                   inputChunk++;
@@ -306,31 +346,26 @@ public class VideoResampler {
                   Log.d( TAG, "input buffer not available" );
             }
          }
+         
          // Assume output is available. Loop until both assumptions are false.
          boolean decoderOutputAvailable = !decoderDone;
          boolean encoderOutputAvailable = true;
          while ( decoderOutputAvailable || encoderOutputAvailable ) {
             // Start by draining any pending output from the encoder. It's important to
             // do this before we try to stuff any more data in.
-            int encoderStatus = encoder.dequeueOutputBuffer( info, TIMEOUT_USEC );
+            int encoderStatus = mEncoder.dequeueOutputBuffer( info, TIMEOUT_USEC );
             if ( encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER ) {
                // no output available yet
                if ( VERBOSE )
                   Log.d( TAG, "no output from encoder available" );
                encoderOutputAvailable = false;
             } else if ( encoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED ) {
-               encoderOutputBuffers = encoder.getOutputBuffers();
+               encoderOutputBuffers = mEncoder.getOutputBuffers();
                if ( VERBOSE )
                   Log.d( TAG, "encoder output buffers changed" );
             } else if ( encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED ) {
 
-               try {
-                  mMuxer = new MediaMuxer( mOutputUri.toString(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4 );
-               } catch ( IOException ioe ) {
-                  throw new RuntimeException( "MediaMuxer creation failed", ioe );
-               }
-
-               MediaFormat newFormat = encoder.getOutputFormat();
+               MediaFormat newFormat = mEncoder.getOutputFormat();
 
                mTrackIndex = mMuxer.addTrack( newFormat );
                mMuxer.start();
@@ -356,7 +391,7 @@ public class VideoResampler {
                      Log.d( TAG, "encoder output " + info.size + " bytes" );
                }
                outputDone = ( info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM ) != 0;
-               encoder.releaseOutputBuffer( encoderStatus, false );
+               mEncoder.releaseOutputBuffer( encoderStatus, false );
             }
             if ( encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER ) {
                // Continue attempts to drain output.
@@ -399,19 +434,21 @@ public class VideoResampler {
                      // This waits for the image and renders it after it arrives.
                      if ( VERBOSE )
                         Log.d( TAG, "awaiting frame" );
-                     outputSurface.awaitNewImage();
-                     outputSurface.drawImage();
+                     mOutputSurface.awaitNewImage();
+                     mOutputSurface.drawImage();
                      // Send it to the encoder.
                      long nSecs = info.presentationTimeUs * 1000;
-                     if ( mClip.getStartTime() != -1 ) {
-                        nSecs = ( info.presentationTimeUs - ( mClip.getStartTime() * 1000 ) ) * 1000;
+
+                     if ( clip.getStartTime() != -1 ) {
+                        nSecs = ( info.presentationTimeUs - ( clip.getStartTime() * 1000 ) ) * 1000;
                      }
                      
+                     Log.d( "this", "Setting presentation time " + nSecs / ( 1000 * 1000 ) );
                      nSecs = Math.max( 0, nSecs );
-                     inputSurface.setPresentationTime( nSecs );
+                     mInputSurface.setPresentationTime( nSecs );
                      if ( VERBOSE )
                         Log.d( TAG, "swapBuffers" );
-                     inputSurface.swapBuffers();
+                     mInputSurface.swapBuffers();
                   }
                   if ( ( info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM ) != 0 ) {
                      // forward decoder EOS to encoder
@@ -421,7 +458,7 @@ public class VideoResampler {
                         // Bail early, possibly dropping a frame.
                         return;
                      } else {
-                        encoder.signalEndOfInputStream();
+                        mEncoder.signalEndOfInputStream();
                      }
                   }
                }
