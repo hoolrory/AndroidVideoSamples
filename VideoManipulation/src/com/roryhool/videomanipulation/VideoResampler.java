@@ -197,6 +197,8 @@ public class VideoResampler {
 
          if ( mClip.getStartTime() != -1 ) {
             mExtractor.seekTo( mClip.getStartTime() * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC );
+
+            mClip.setStartTime( mExtractor.getSampleTime() / 1000 );
          }
 
          mExtractFormat = mExtractor.getTrackFormat( mExtractIndex );
@@ -259,7 +261,7 @@ public class VideoResampler {
       int inputChunk = 0;
       int outputCount = 0;
       
-      int endTime = mClip.getEndTime();
+      long endTime = mClip.getEndTime();
 
       if ( endTime == -1 ) {
          endTime = mVideoDuration;
@@ -400,7 +402,7 @@ public class VideoResampler {
                      outputSurface.awaitNewImage();
                      outputSurface.drawImage();
                      // Send it to the encoder.
-                     long nSecs = info.presentationTimeUs * 100;
+                     long nSecs = info.presentationTimeUs * 1000;
                      if ( mClip.getStartTime() != -1 ) {
                         nSecs = ( info.presentationTimeUs - ( mClip.getStartTime() * 1000 ) ) * 1000;
                      }

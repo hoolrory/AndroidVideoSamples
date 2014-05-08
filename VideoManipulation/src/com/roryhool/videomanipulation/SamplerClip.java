@@ -6,14 +6,14 @@ public class SamplerClip {
 
    Uri mUri;
 
-   int mStartTime = -1;
-   int mEndTime = -1;
+   long mStartTime = -1;
+   long mEndTime = -1;
 
    public SamplerClip( Uri uri ) {
       mUri = uri;
    }
 
-   public void setStartTime( int startTime ) {
+   public void setStartTime( long startTime ) {
       mStartTime = startTime;
    }
 
@@ -25,11 +25,11 @@ public class SamplerClip {
       return mUri;
    }
 
-   public int getStartTime() {
+   public long getStartTime() {
       return mStartTime;
    }
 
-   public int getEndTime() {
+   public long getEndTime() {
       return mEndTime;
    }
 }
