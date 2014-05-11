@@ -14,7 +14,7 @@
    limitations under the License.
  **/
 
-package com.roryhool.videomanipulation;
+package com.roryhool.videocreation;
 
 import java.io.File;
 import java.util.Locale;
@@ -32,7 +32,9 @@ import android.widget.TextView;
 
 import com.roryhool.commonvideolibrary.Intents;
 import com.roryhool.commonvideolibrary.MediaHelper;
+import com.roryhool.commonvideolibrary.SamplerClip;
 import com.roryhool.commonvideolibrary.UriHelper;
+import com.roryhool.commonvideolibrary.VideoResampler;
 
 public class JoinActivity extends Activity {
 

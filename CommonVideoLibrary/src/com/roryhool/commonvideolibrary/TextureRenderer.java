@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.roryhool.videomanipulation;
+package com.roryhool.commonvideolibrary;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

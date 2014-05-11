@@ -1,5 +1,11 @@
 <resources>
 
     <string name="app_name">VideoCreation</string>
+    
+    <string name="join_videos">Join Videos</string>
+    <string name="render_video">Render Video from Surface</string>
+
+    <string name="select_video_1">Select Video 1</string>
+    <string name="select_video_2">Select Video 2</string>
 
 </resources>

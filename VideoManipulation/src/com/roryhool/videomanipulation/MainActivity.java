@@ -111,12 +111,6 @@ public class MainActivity extends Activity {
       startActivity( intent );
    }
 
-   public void onJoinClicked( View view ) {
-      Intent intent = new Intent( this, JoinActivity.class );
-      intent.setData( mUri );
-      startActivity( intent );
-   }
-
    public void onTrimClicked( View view ) {
       Intent intent = new Intent( this, TrimActivity.class );
       intent.setData( mUri );

@@ -39,13 +39,6 @@
 	        android:onClick="onRotateClicked" />
 	    
 	    <Button
-	        android:id="@+id/join_button"
-           android:layout_width="match_parent"
-           android:layout_height="48dip"
-	        android:text="@string/join_videos"
-	        android:onClick="onJoinClicked" />
-	    
-	    <Button
 	        android:id="@+id/trim_button"
            android:layout_width="match_parent"
            android:layout_height="48dip"

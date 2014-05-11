@@ -14,7 +14,7 @@
    limitations under the License.
  **/
 
-package com.roryhool.videomanipulation;
+package com.roryhool.commonvideolibrary;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,8 +30,6 @@ import android.media.MediaMuxer;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
-
-import com.roryhool.commonvideolibrary.MediaHelper;
 
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
 public class VideoResampler {

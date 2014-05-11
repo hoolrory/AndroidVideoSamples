@@ -35,10 +35,6 @@
             android:label="@string/app_name" />
         
         <activity
-            android:name="com.roryhool.videomanipulation.JoinActivity"
-            android:label="@string/app_name" />
-        
-        <activity
             android:name="com.roryhool.videomanipulation.ResampleActivity"
             android:label="@string/app_name" />
         

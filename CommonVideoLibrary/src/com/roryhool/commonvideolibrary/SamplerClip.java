@@ -14,11 +14,9 @@
    limitations under the License.
  **/
 
-package com.roryhool.videomanipulation;
+package com.roryhool.commonvideolibrary;
 
 import android.net.Uri;
-
-import com.roryhool.commonvideolibrary.MediaHelper;
 
 public class SamplerClip {
 

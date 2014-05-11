@@ -42,6 +42,8 @@ import android.widget.TextView;
 
 import com.roryhool.commonvideolibrary.MediaHelper;
 import com.roryhool.commonvideolibrary.Resolution;
+import com.roryhool.commonvideolibrary.SamplerClip;
+import com.roryhool.commonvideolibrary.VideoResampler;
 
 @TargetApi( Build.VERSION_CODES.JELLY_BEAN_MR2 )
 public class ResampleActivity extends Activity {

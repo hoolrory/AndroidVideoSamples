@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.roryhool.videomanipulation;
+package com.roryhool.commonvideolibrary;
 
 import android.opengl.EGL14;
 import android.opengl.EGLConfig;

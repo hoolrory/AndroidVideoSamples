@@ -32,6 +32,8 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 
 import com.roryhool.commonvideolibrary.MediaHelper;
+import com.roryhool.commonvideolibrary.SamplerClip;
+import com.roryhool.commonvideolibrary.VideoResampler;
 
 public class TrimActivity extends Activity {
 
