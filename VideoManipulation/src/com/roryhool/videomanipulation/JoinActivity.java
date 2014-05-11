@@ -17,11 +17,13 @@
 package com.roryhool.videomanipulation;
 
 import java.io.File;
+import java.util.Locale;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -47,6 +49,9 @@ public class JoinActivity extends Activity {
 
    Button mJoinButton;
 
+   Uri mUri1;
+   Uri mUri2;
+
    @Override
    public void onCreate( Bundle savedInstanceState ) {
       super.onCreate( savedInstanceState );
@@ -66,6 +71,7 @@ public class JoinActivity extends Activity {
 
    public void onJoinClicked( View view ) {
 
+      new JoinTask().execute( mUri1, mUri2 );
    }
 
    public void onSelectClicked1( View view ) {
@@ -95,6 +101,9 @@ public class JoinActivity extends Activity {
    }
 
    private void loadUri1( Uri uri ) {
+
+      mUri1 = uri;
+
       Bitmap bitmap = MediaHelper.GetThumbnailFromVideo( uri, 0 );
       mVideo1Thumbnail.setImageBitmap( bitmap );
 
@@ -103,6 +112,9 @@ public class JoinActivity extends Activity {
    }
 
    private void loadUri2( Uri uri ) {
+
+      mUri2 = uri;
+
       Bitmap bitmap = MediaHelper.GetThumbnailFromVideo( uri, 0 );
       mVideo2Thumbnail.setImageBitmap( bitmap );
 
@@ -110,6 +122,51 @@ public class JoinActivity extends Activity {
       mVideo2Name.setText( file.getName() );
 
       mJoinButton.setEnabled( true );
+   }
+
+   class JoinTask extends AsyncTask<Uri, Void, Uri> {
+
+      @Override
+      protected Uri doInBackground( Uri... uris ) {
+
+         if ( uris.length < 2 ) {
+            return null;
+         }
+
+         Uri uri1 = uris[0];
+         Uri uri2 = uris[1];
+
+         VideoResampler resampler = new VideoResampler();
+         SamplerClip clip1 = new SamplerClip( uri1 );
+         resampler.addSamplerClip( clip1 );
+         SamplerClip clip2 = new SamplerClip( uri2 );
+         resampler.addSamplerClip( clip2 );
+
+         String pathWithoutExtension1 = uri1.toString().replace( ".mp4", "" );
+         String pathWithoutExtension2 = uri2.toString().replace( ".mp4", "" );
+
+         String resampledFileName = String.format( Locale.US, "%s_joined_to_other.mp4", pathWithoutExtension1 );
+
+         Uri outputUri = Uri.parse( resampledFileName );
+
+         resampler.setOutput( outputUri );
+
+         try {
+            resampler.start();
+         } catch ( Throwable e ) {
+            e.printStackTrace();
+         }
+
+         return outputUri;
+      }
+
+      @Override
+      protected void onPostExecute( Uri outputUri ) {
+         Intent sendIntent = new Intent();
+         sendIntent.setAction( Intent.ACTION_VIEW );
+         sendIntent.setDataAndType( outputUri, "video/mp4" );
+         startActivity( sendIntent );
+      }
    }
 
 }

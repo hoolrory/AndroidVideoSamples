@@ -94,6 +94,10 @@ public class VideoResampler {
 
    // int mEndTime = -1;
 
+   long mLastSampleTime = 0;
+
+   long mEncoderPresentationTimeUs = 0;
+
    public VideoResampler() {
 
    }
@@ -196,10 +200,14 @@ public class VideoResampler {
          feedClipToEncoder( clip );
       }
 
+      mEncoder.signalEndOfInputStream();
+
       releaseOutputResources();
    }
 
    private void feedClipToEncoder( SamplerClip clip ) {
+
+      mLastSampleTime = 0;
 
       MediaCodec decoder = null;
 
@@ -306,6 +314,8 @@ public class VideoResampler {
          endTime = clip.getVideoDuration();
       }
 
+      boolean outputDoneNextTimeWeCheck = false;
+
       boolean outputDone = false;
       boolean inputDone = false;
       boolean decoderDone = false;
@@ -391,8 +401,14 @@ public class VideoResampler {
                      Log.d( TAG, "encoder output " + info.size + " bytes" );
                }
                outputDone = ( info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM ) != 0;
+
                mEncoder.releaseOutputBuffer( encoderStatus, false );
             }
+
+            if ( outputDoneNextTimeWeCheck ) {
+               outputDone = true;
+            }
+
             if ( encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER ) {
                // Continue attempts to drain output.
                continue;
@@ -437,6 +453,7 @@ public class VideoResampler {
                      mOutputSurface.awaitNewImage();
                      mOutputSurface.drawImage();
                      // Send it to the encoder.
+                     
                      long nSecs = info.presentationTimeUs * 1000;
 
                      if ( clip.getStartTime() != -1 ) {
@@ -445,28 +462,26 @@ public class VideoResampler {
                      
                      Log.d( "this", "Setting presentation time " + nSecs / ( 1000 * 1000 ) );
                      nSecs = Math.max( 0, nSecs );
-                     mInputSurface.setPresentationTime( nSecs );
+                     
+                     mEncoderPresentationTimeUs += ( nSecs - mLastSampleTime );
+
+                     mLastSampleTime = nSecs;
+                     
+                     mInputSurface.setPresentationTime( mEncoderPresentationTimeUs );
                      if ( VERBOSE )
                         Log.d( TAG, "swapBuffers" );
                      mInputSurface.swapBuffers();
                   }
                   if ( ( info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM ) != 0 ) {
-                     // forward decoder EOS to encoder
-                     if ( VERBOSE )
-                        Log.d( TAG, "signaling input EOS" );
-                     if ( WORK_AROUND_BUGS ) {
-                        // Bail early, possibly dropping a frame.
-                        return;
-                     } else {
-                        mEncoder.signalEndOfInputStream();
-                     }
+                     // mEncoder.signalEndOfInputStream();
+                     outputDoneNextTimeWeCheck = true;
                   }
                }
             }
          }
       }
       if ( inputChunk != outputCount ) {
-         throw new RuntimeException( "frame lost: " + inputChunk + " in, " + outputCount + " out" );
+         // throw new RuntimeException( "frame lost: " + inputChunk + " in, " + outputCount + " out" );
       }
    }
 
