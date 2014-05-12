@@ -42,7 +42,7 @@
            android:layout_width="match_parent"
            android:layout_height="48dip"
            android:text="@string/render_video"
-           android:onClick="onResampleClicked" />
+           android:onClick="onRenderClicked" />
        
    </LinearLayout>
     

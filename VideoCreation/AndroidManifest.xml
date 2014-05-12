@@ -29,6 +29,10 @@
             android:name="com.roryhool.videocreation.JoinActivity"
             android:label="@string/app_name" />
         
+        <activity
+            android:name="com.roryhool.videocreation.RenderFromSurfaceActivity"
+            android:label="@string/app_name" />
+        
     </application>
 
 </manifest>

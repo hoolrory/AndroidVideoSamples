@@ -111,4 +111,10 @@ public class MainActivity extends Activity {
       startActivity( intent );
    }
 
+   public void onRenderClicked( View view ) {
+      Intent intent = new Intent( this, RenderFromSurfaceActivity.class );
+      intent.setData( mUri );
+      startActivity( intent );
+   }
+
 }
